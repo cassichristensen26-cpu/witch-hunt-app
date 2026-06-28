@@ -1,52 +1,141 @@
-/* ── HP Scroll & Parchment Design System ── */
+/* ── HP Parchment Design System ── */
 
-/* === Page === */
+/* === Page backgrounds === */
 .hp-page {
   min-height: 100vh;
-  background: radial-gradient(ellipse at 50% 40%, #1e1308 0%, #0d0a06 100%);
+  background: radial-gradient(ellipse at 50% 35%, #1e1308 0%, #0d0a06 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 32px 16px;
-  overflow-x: hidden;
+  padding: 32px 20px;
+  overflow: hidden;
 }
 .hp-page-scroll {
   min-height: 100vh;
   background: radial-gradient(ellipse at 50% 20%, #1e1308 0%, #0d0a06 100%);
-  padding: 32px 16px 48px;
+  padding: 32px 16px 64px;
   overflow-x: hidden;
 }
 
-/* === Scroll container === */
+/* ─────────────────────────────────────────────
+   FOLDED PARCHMENT (Landing page)
+   ───────────────────────────────────────────── */
+
+.parchment-scene {
+  position: relative;
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto;
+  filter: drop-shadow(0 20px 60px rgba(0,0,0,0.85)) drop-shadow(0 4px 16px rgba(0,0,0,0.5));
+}
+
+/* Center panel — always visible, contains login form */
+.parchment-center {
+  position: relative;
+  z-index: 2;
+  background: linear-gradient(
+    to right,
+    #a87838 0%, #c89848 2%, #e4c888 7%,
+    #f5ecd6 15%, #fdf6e3 32%, #faf3dc 50%,
+    #fdf6e3 68%, #f5ecd6 85%,
+    #e4c888 93%, #c89848 98%, #a87838 100%
+  );
+  padding: 36px 30px 28px;
+}
+
+/* Fold crease line at top of center */
+.parchment-center::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 4px;
+  background: linear-gradient(to bottom, rgba(60,30,5,0.35), transparent);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  pointer-events: none;
+}
+/* Fold crease line at bottom of center */
+.parchment-center::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0; height: 4px;
+  background: linear-gradient(to top, rgba(60,30,5,0.35), transparent);
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.25);
+  pointer-events: none;
+}
+
+/* Fold flaps — start edge-on (rotateX ±90°), unfold to flat */
+.parchment-flap {
+  position: absolute;
+  left: 0; right: 0;
+  /* slightly yellower/darker = back of the paper */
+  background: linear-gradient(
+    to right,
+    #8a6028 0%, #a87838 3%, #ccaa68 7%,
+    #e8d8a0 15%, #f0e4c0 35%, #ecdcb4 50%,
+    #f0e4c0 65%, #e8d8a0 85%,
+    #ccaa68 93%, #a87838 97%, #8a6028 100%
+  );
+  will-change: transform;
+}
+
+.parchment-flap.top {
+  height: 220px;
+  bottom: 100%;
+  transform-origin: bottom center;
+  transform: rotateX(-90deg);
+  transition: transform 0.75s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0s;
+  box-shadow: inset 0 -6px 16px rgba(0,0,0,0.25);
+}
+.parchment-flap.bottom {
+  height: 220px;
+  top: 100%;
+  transform-origin: top center;
+  transform: rotateX(90deg);
+  transition: transform 0.75s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.18s;
+  box-shadow: inset 0 6px 16px rgba(0,0,0,0.25);
+}
+
+/* Open state — flaps unfold flat */
+.parchment-scene.open .parchment-flap.top {
+  transform: rotateX(0deg);
+}
+.parchment-scene.open .parchment-flap.bottom {
+  transform: rotateX(0deg);
+}
+
+/* Ruled lines texture on all parchment surfaces */
+.parchment-center::before,
+.parchment-flap {
+  /* layered separately to not conflict with pseudo-elements above */
+}
+.parchment-lines {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    180deg,
+    transparent 0px, transparent 29px,
+    rgba(80,45,10,0.07) 29px, rgba(80,45,10,0.07) 30px
+  );
+  pointer-events: none;
+}
+
+/* ─────────────────────────────────────────────
+   UNROLLED PARCHMENT (Team page)
+   ───────────────────────────────────────────── */
+
 .scroll-wrap {
   width: 100%;
   max-width: 400px;
   margin: 0 auto;
   filter: drop-shadow(0 16px 48px rgba(0,0,0,0.85));
-  transition: opacity 0.1s;
-}
-.scroll-wrap.unrolling {
-  animation: scrollUnroll 0.72s cubic-bezier(0.4, 0, 0.8, 1) forwards;
-  pointer-events: none;
-}
-@keyframes scrollUnroll {
-  0%   { opacity: 1; transform: scaleY(1) translateY(0); }
-  35%  { opacity: 1; transform: scaleY(1.05) translateY(-4px); }
-  100% { opacity: 0; transform: scaleY(0.2) translateY(-40px); }
 }
 
-/* === Scroll rods (top / bottom cylinders) === */
 .scroll-rod {
   height: 30px;
   background: linear-gradient(
     to bottom,
-    #1c0d05 0%,
-    #4d2810 18%,
-    #8c5428 42%,
-    #a8682e 54%,
-    #7a4a1e 72%,
-    #3d1f0a 100%
+    #1c0d05 0%, #4d2810 18%, #8c5428 42%,
+    #a8682e 54%, #7a4a1e 72%, #3d1f0a 100%
   );
   position: relative;
   z-index: 2;
@@ -68,24 +157,16 @@
   border-radius: 50%;
 }
 
-/* === Parchment body === */
 .scroll-body {
   background: linear-gradient(
     to right,
-    #b08040 0%,
-    #c99850 2%,
-    #e8cf98 7%,
-    #f7eed8 16%,
-    #fdf6e3 32%,
-    #faf3dc 50%,
-    #fdf6e3 68%,
-    #f7eed8 84%,
-    #e8cf98 93%,
-    #c99850 98%,
-    #b08040 100%
+    #b08040 0%, #c99850 2%, #e8cf98 7%,
+    #f7eed8 16%, #fdf6e3 32%, #faf3dc 50%,
+    #fdf6e3 68%, #f7eed8 84%,
+    #e8cf98 93%, #c99850 98%, #b08040 100%
   );
   position: relative;
-  padding: 28px 32px 24px;
+  padding: 28px 30px 24px;
 }
 .scroll-body::before {
   content: '';
@@ -99,7 +180,10 @@
   pointer-events: none;
 }
 
-/* === Typography === */
+/* ─────────────────────────────────────────────
+   SHARED TYPOGRAPHY & COMPONENTS
+   ───────────────────────────────────────────── */
+
 .hp-title {
   font-family: 'Cinzel', serif;
   font-size: 1.65rem;
@@ -137,7 +221,6 @@
   position: relative;
 }
 
-/* === Inputs === */
 .hp-code-input {
   width: 100%;
   background: transparent;
@@ -179,14 +262,10 @@
   transition: border-color 0.2s;
   position: relative;
 }
-.hp-text-input::placeholder {
-  color: rgba(90,55,15,0.22);
-  font-style: italic;
-}
+.hp-text-input::placeholder { color: rgba(90,55,15,0.22); font-style: italic; }
 .hp-text-input:focus { border-bottom-color: rgba(50,20,0,0.6); }
 .hp-text-input:disabled { opacity: 0.45; cursor: not-allowed; }
 
-/* === Buttons === */
 .hp-btn-primary {
   width: 100%;
   margin-top: 18px;
@@ -209,7 +288,6 @@
   background: linear-gradient(to bottom, #7a4a28 0%, #5c3317 100%);
 }
 
-/* === Error === */
 .hp-error {
   font-family: 'IM Fell English', serif;
   font-style: italic;
@@ -219,8 +297,6 @@
   margin-top: 10px;
   position: relative;
 }
-
-/* === Small links === */
 .hp-ghost-link {
   display: block;
   text-align: center;
@@ -236,7 +312,7 @@
 }
 .hp-ghost-link:hover { color: rgba(35,16,5,0.6); }
 
-/* === Ingredient slot === */
+/* === Ingredient slots === */
 .ingredient-slot {
   background: rgba(200,160,90,0.1);
   border: 1px solid rgba(90,55,15,0.2);
@@ -250,7 +326,7 @@
   border-color: rgba(90,55,15,0.32);
 }
 
-/* === Parchment tabs === */
+/* === Tabs === */
 .hp-tabs {
   display: flex;
   border-bottom: 1.5px solid rgba(90,55,15,0.2);
@@ -287,14 +363,8 @@
   text-align: center;
   margin-bottom: 16px;
 }
-.hp-timer.warning {
-  background: rgba(160,80,0,0.1);
-  border-color: rgba(160,80,0,0.3);
-}
-.hp-timer.expired {
-  background: rgba(140,20,20,0.1);
-  border-color: rgba(140,20,20,0.3);
-}
+.hp-timer.warning { background: rgba(160,80,0,0.1); border-color: rgba(160,80,0,0.3); }
+.hp-timer.expired { background: rgba(140,20,20,0.1); border-color: rgba(140,20,20,0.3); }
 .hp-timer-label {
   font-family: 'Cinzel', serif;
   font-size: 0.63rem;
@@ -332,243 +402,67 @@
   padding: 12px 14px;
   margin-bottom: 16px;
 }
-.hp-done-title {
-  font-family: 'Cinzel', serif;
-  font-size: 0.8rem;
-  color: #163820;
-  margin-bottom: 3px;
-}
-.hp-done-sub {
-  font-family: 'IM Fell English', serif;
-  font-style: italic;
-  font-size: 0.82rem;
-  color: rgba(22,56,32,0.7);
-}
+.hp-done-title { font-family: 'Cinzel', serif; font-size: 0.8rem; color: #163820; margin-bottom: 3px; }
+.hp-done-sub { font-family: 'IM Fell English', serif; font-style: italic; font-size: 0.82rem; color: rgba(22,56,32,0.7); }
 
 /* === Packet banners === */
-.hp-packet {
-  border-radius: 2px;
-  overflow: hidden;
-  margin-bottom: 10px;
-  border: 1px solid;
-}
+.hp-packet { border-radius: 2px; overflow: hidden; margin-bottom: 10px; border: 1px solid; }
 .hp-packet.p2 { background: rgba(0,60,110,0.08); border-color: rgba(0,60,110,0.22); }
 .hp-packet.p3 { background: rgba(70,0,110,0.08); border-color: rgba(70,0,110,0.22); }
-.hp-packet-btn {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  cursor: pointer;
-  background: none;
-  border: none;
-  width: 100%;
-}
-.hp-packet-title {
-  font-family: 'Cinzel', serif;
-  font-size: 0.68rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
+.hp-packet-btn { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; cursor: pointer; background: none; border: none; width: 100%; }
+.hp-packet-title { font-family: 'Cinzel', serif; font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; }
 .p2 .hp-packet-title { color: rgba(0,60,130,0.8); }
 .p3 .hp-packet-title { color: rgba(70,0,130,0.8); }
-.hp-packet-toggle {
-  font-family: 'IM Fell English', serif;
-  font-size: 0.7rem;
-  color: rgba(90,55,15,0.4);
-  font-style: italic;
-}
-.hp-packet-body {
-  font-family: 'IM Fell English', serif;
-  font-style: italic;
-  font-size: 0.9rem;
-  padding: 0 14px 12px;
-}
+.hp-packet-toggle { font-family: 'IM Fell English', serif; font-size: 0.7rem; color: rgba(90,55,15,0.4); font-style: italic; }
+.hp-packet-body { font-family: 'IM Fell English', serif; font-style: italic; font-size: 0.9rem; padding: 0 14px 12px; }
 .p2 .hp-packet-body { color: #001e5a; }
 .p3 .hp-packet-body { color: #32005a; }
 
 /* === Hint box === */
-.hp-hint-box {
-  margin-top: 10px;
-  background: rgba(50,20,100,0.09);
-  border: 1px solid rgba(50,20,100,0.22);
-  border-radius: 2px;
-  padding: 10px 12px;
-}
-.hp-hint-label {
-  font-family: 'Cinzel', serif;
-  font-size: 0.62rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: rgba(50,20,100,0.55);
-  margin-bottom: 5px;
-}
-.hp-hint-text {
-  font-family: 'IM Fell English', serif;
-  font-style: italic;
-  font-size: 0.95rem;
-  color: #1e0c60;
-}
-.hp-hint-sub {
-  font-family: 'IM Fell English', serif;
-  font-style: italic;
-  font-size: 0.78rem;
-  color: rgba(30,12,96,0.5);
-  margin-top: 6px;
-}
-.hp-hint-link {
-  font-family: 'IM Fell English', serif;
-  font-style: italic;
-  font-size: 0.85rem;
-  color: rgba(50,20,100,0.5);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  transition: color 0.2s;
-  margin-top: 8px;
-  display: inline-block;
-}
+.hp-hint-box { margin-top: 10px; background: rgba(50,20,100,0.09); border: 1px solid rgba(50,20,100,0.22); border-radius: 2px; padding: 10px 12px; }
+.hp-hint-label { font-family: 'Cinzel', serif; font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(50,20,100,0.55); margin-bottom: 5px; }
+.hp-hint-text { font-family: 'IM Fell English', serif; font-style: italic; font-size: 0.95rem; color: #1e0c60; }
+.hp-hint-sub { font-family: 'IM Fell English', serif; font-style: italic; font-size: 0.78rem; color: rgba(30,12,96,0.5); margin-top: 6px; }
+.hp-hint-link { font-family: 'IM Fell English', serif; font-style: italic; font-size: 0.85rem; color: rgba(50,20,100,0.5); background: none; border: none; cursor: pointer; padding: 0; transition: color 0.2s; margin-top: 8px; display: inline-block; }
 .hp-hint-link:hover { color: rgba(50,20,100,0.8); }
-.hp-hint-limit {
-  font-family: 'IM Fell English', serif;
-  font-style: italic;
-  font-size: 0.82rem;
-  color: rgba(35,16,5,0.3);
-  margin-top: 8px;
-  display: inline-block;
-}
+.hp-hint-limit { font-family: 'IM Fell English', serif; font-style: italic; font-size: 0.82rem; color: rgba(35,16,5,0.3); margin-top: 8px; display: inline-block; }
 
 /* === Adjustments === */
-.hp-adj {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  border-radius: 2px;
-  border: 1px solid;
-  margin-bottom: 6px;
-}
+.hp-adj { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-radius: 2px; border: 1px solid; margin-bottom: 6px; }
 .hp-adj.bonus { background: rgba(20,70,30,0.1); border-color: rgba(20,70,30,0.25); }
 .hp-adj.penalty { background: rgba(110,20,20,0.1); border-color: rgba(110,20,20,0.25); }
-.hp-adj-text {
-  font-family: 'IM Fell English', serif;
-  font-style: italic;
-  font-size: 0.88rem;
-}
+.hp-adj-text { font-family: 'IM Fell English', serif; font-style: italic; font-size: 0.88rem; }
 .hp-adj.bonus .hp-adj-text { color: #163820; }
 .hp-adj.penalty .hp-adj-text { color: #5a1010; }
-.hp-adj-reason {
-  font-family: 'IM Fell English', serif;
-  font-style: italic;
-  font-size: 0.76rem;
-  color: rgba(35,16,5,0.4);
-  margin-left: 8px;
-}
+.hp-adj-reason { font-family: 'IM Fell English', serif; font-style: italic; font-size: 0.76rem; color: rgba(35,16,5,0.4); margin-left: 8px; }
 
 /* === Hint confirm modal === */
-.hp-modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.82);
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  z-index: 50;
-  padding: 16px;
-}
-@media (min-width: 640px) {
-  .hp-modal-overlay { align-items: center; }
-}
+.hp-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.82); display: flex; align-items: flex-end; justify-content: center; z-index: 50; padding: 16px; }
+@media (min-width: 640px) { .hp-modal-overlay { align-items: center; } }
 .hp-modal {
-  background: linear-gradient(
-    to right,
-    #c99850 0%, #e8cf98 5%, #f7eed8 15%,
-    #fdf6e3 50%, #f7eed8 85%, #e8cf98 95%, #c99850 100%
-  );
+  background: linear-gradient(to right, #c99850 0%, #e8cf98 5%, #f7eed8 15%, #fdf6e3 50%, #f7eed8 85%, #e8cf98 95%, #c99850 100%);
   border-radius: 2px;
   padding: 24px 24px 20px;
-  width: 100%;
-  max-width: 360px;
+  width: 100%; max-width: 360px;
   position: relative;
   filter: drop-shadow(0 8px 32px rgba(0,0,0,0.8));
 }
 .hp-modal::before {
   content: '';
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(
-    180deg, transparent 0px, transparent 29px,
-    rgba(90,55,15,0.065) 29px, rgba(90,55,15,0.065) 30px
-  );
-  pointer-events: none;
-  border-radius: 2px;
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(180deg, transparent 0px, transparent 29px, rgba(90,55,15,0.065) 29px, rgba(90,55,15,0.065) 30px);
+  pointer-events: none; border-radius: 2px;
 }
-.hp-modal-title {
-  font-family: 'Cinzel', serif;
-  font-size: 1rem;
-  font-weight: 700;
-  margin-bottom: 8px;
-  position: relative;
-}
+.hp-modal-title { font-family: 'Cinzel', serif; font-size: 1rem; font-weight: 700; margin-bottom: 8px; position: relative; }
 .hp-modal-title.free { color: #163050; }
 .hp-modal-title.warn { color: #7a3800; }
 .hp-modal-title.danger { color: #7a1414; }
-.hp-modal-body {
-  font-family: 'IM Fell English', serif;
-  font-style: italic;
-  font-size: 0.9rem;
-  color: #2a1305;
-  margin-bottom: 12px;
-  position: relative;
-}
-.hp-modal-warning {
-  background: rgba(160,80,0,0.1);
-  border: 1px solid rgba(160,80,0,0.28);
-  border-radius: 2px;
-  padding: 10px 12px;
-  margin-bottom: 18px;
-  position: relative;
-}
-.hp-modal-warning-text {
-  font-family: 'IM Fell English', serif;
-  font-style: italic;
-  font-size: 0.86rem;
-  color: #7a3800;
-}
-.hp-modal-actions {
-  display: flex;
-  gap: 10px;
-  position: relative;
-}
-.hp-btn-cancel {
-  flex: 1;
-  padding: 11px;
-  background: rgba(90,55,15,0.12);
-  border: 1px solid rgba(90,55,15,0.3);
-  border-radius: 2px;
-  font-family: 'Cinzel', serif;
-  font-size: 0.8rem;
-  color: rgba(35,16,5,0.65);
-  cursor: pointer;
-  transition: background 0.2s;
-  letter-spacing: 0.06em;
-}
+.hp-modal-body { font-family: 'IM Fell English', serif; font-style: italic; font-size: 0.9rem; color: #2a1305; margin-bottom: 12px; position: relative; }
+.hp-modal-warning { background: rgba(160,80,0,0.1); border: 1px solid rgba(160,80,0,0.28); border-radius: 2px; padding: 10px 12px; margin-bottom: 18px; position: relative; }
+.hp-modal-warning-text { font-family: 'IM Fell English', serif; font-style: italic; font-size: 0.86rem; color: #7a3800; }
+.hp-modal-actions { display: flex; gap: 10px; position: relative; }
+.hp-btn-cancel { flex: 1; padding: 11px; background: rgba(90,55,15,0.12); border: 1px solid rgba(90,55,15,0.3); border-radius: 2px; font-family: 'Cinzel', serif; font-size: 0.8rem; color: rgba(35,16,5,0.65); cursor: pointer; transition: background 0.2s; letter-spacing: 0.06em; }
 .hp-btn-cancel:hover { background: rgba(90,55,15,0.2); }
-.hp-btn-confirm {
-  flex: 1;
-  padding: 11px;
-  background: linear-gradient(to bottom, #3d1a6e, #26104a);
-  border: 1px solid rgba(100,50,180,0.5);
-  border-radius: 2px;
-  font-family: 'Cinzel', serif;
-  font-size: 0.8rem;
-  color: #d4b8f8;
-  cursor: pointer;
-  transition: background 0.2s, opacity 0.2s;
-  letter-spacing: 0.06em;
-}
+.hp-btn-confirm { flex: 1; padding: 11px; background: linear-gradient(to bottom, #3d1a6e, #26104a); border: 1px solid rgba(100,50,180,0.5); border-radius: 2px; font-family: 'Cinzel', serif; font-size: 0.8rem; color: #d4b8f8; cursor: pointer; transition: background 0.2s, opacity 0.2s; letter-spacing: 0.06em; }
 .hp-btn-confirm:disabled { opacity: 0.4; cursor: not-allowed; }
-.hp-btn-confirm:not(:disabled):hover {
-  background: linear-gradient(to bottom, #5a28a0, #3d1a6e);
-}
+.hp-btn-confirm:not(:disabled):hover { background: linear-gradient(to bottom, #5a28a0, #3d1a6e); }

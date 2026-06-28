@@ -7,7 +7,7 @@ export default function Landing() {
   const [code, setCode] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [unrolling, setUnrolling] = useState(false)
+  const [open, setOpen] = useState(false)
   const navigate = useNavigate()
 
   if (localStorage.getItem('wh_team')) {
@@ -28,8 +28,8 @@ export default function Landing() {
         gameId: team.game_id,
         gameName: game.name,
       }))
-      setUnrolling(true)
-      setTimeout(() => navigate('/team'), 720)
+      setOpen(true)
+      setTimeout(() => navigate('/team'), 1100)
     } catch (err) {
       setError(err.message === 'Invalid join code' ? 'Invalid join code — check with your moderator' : err.message)
       setLoading(false)
@@ -37,11 +37,21 @@ export default function Landing() {
   }
 
   return (
-    <div className="hp-page">
-      <div className={`scroll-wrap${unrolling ? ' unrolling' : ''}`}>
-        <div className="scroll-rod top" />
+    <div
+      className="hp-page"
+      style={{ perspective: '1000px', perspectiveOrigin: 'center 40%' }}
+    >
+      <div className={`parchment-scene${open ? ' open' : ''}`}>
 
-        <div className="scroll-body">
+        {/* Top flap — starts folded (edge-on), unfolds upward */}
+        <div className="parchment-flap top">
+          <div className="parchment-lines" />
+        </div>
+
+        {/* Center panel — always visible */}
+        <div className="parchment-center">
+          <div className="parchment-lines" />
+
           <div className="hp-title">Witch Hunt</div>
           <div className="hp-subtitle">Enter your team's join code</div>
 
@@ -62,7 +72,7 @@ export default function Landing() {
             <button
               className="hp-btn-primary"
               type="submit"
-              disabled={loading || unrolling || code.length < 4}
+              disabled={loading || open || code.length < 4}
             >
               {loading ? 'Joining…' : 'Enter the Hunt'}
             </button>
@@ -74,7 +84,11 @@ export default function Landing() {
           </button>
         </div>
 
-        <div className="scroll-rod bottom" />
+        {/* Bottom flap — starts folded (edge-on), unfolds downward */}
+        <div className="parchment-flap bottom">
+          <div className="parchment-lines" />
+        </div>
+
       </div>
     </div>
   )
