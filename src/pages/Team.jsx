@@ -189,73 +189,51 @@ export default function Team() {
   const warningThresholdMs = totalMs ? totalMs / 9 : null
   const isExpired = timeLeftMs !== null && timeLeftMs <= 0
   const isWarning = !isExpired && timeLeftMs !== null && warningThresholdMs !== null && timeLeftMs <= warningThresholdMs
+  const timerClass = isExpired ? 'expired' : isWarning ? 'warning' : ''
 
   const timeElapsedFraction = (timeLeftMs !== null && totalMs)
     ? Math.max(0, 1 - timeLeftMs / totalMs) : 0
   const showPacket2 = !!(game?.packet2_message && (correctCount >= 3 || timeElapsedFraction >= 1 / 3))
   const showPacket3 = !!(game?.packet3_message && (correctCount >= 6 || timeElapsedFraction >= 2 / 3))
 
-  const timerClass = isExpired ? 'expired' : isWarning ? 'warning' : ''
-
   return (
     <div className="hp-page-scroll">
-      <div className="scroll-wrap" style={{ filter: 'drop-shadow(0 16px 48px rgba(0,0,0,0.85))' }}>
-        {/* Top rod */}
-        <div className="scroll-rod top" />
-
-        {/* Parchment body */}
-        <div className="scroll-body">
+      <div className="team-parchment-wrap">
+        <div className="team-parchment-body parchment">
 
           {/* Header */}
-          <div style={{ marginBottom: 6 }}>
+          <div style={{ marginBottom: 4 }}>
             <div className="hp-title" style={{ fontSize: '1.3rem', textAlign: 'left' }}>
               {game?.name || teamData?.gameName}
             </div>
             <div className="hp-subtitle" style={{ textAlign: 'left', margin: '2px 0 0' }}>
-              Team: <strong style={{ fontStyle: 'normal', color: '#2a1305' }}>{teamData?.teamName}</strong>
-              <span style={{ fontFamily: "'Cinzel', serif", fontSize: '0.68rem', color: 'rgba(90,55,15,0.4)', marginLeft: 8, letterSpacing: '0.1em', fontStyle: 'normal' }}>
+              Team: <strong style={{ fontStyle: 'normal', color: '#1a0a03' }}>{teamData?.teamName}</strong>
+              <span style={{ fontFamily: "'Cinzel', serif", fontSize: '0.68rem', color: 'rgba(80,50,8,0.4)', marginLeft: 8, fontStyle: 'normal', letterSpacing: '0.08em' }}>
                 {teamData?.joinCode}
               </span>
             </div>
           </div>
 
-          <hr className="hp-divider" />
+          {/* First fold crease — visible mark where the paper was folded */}
+          <div className="parchment-crease" style={{ margin: '20px -30px' }} />
 
           {/* Tabs */}
           <div className="hp-tabs">
-            <button
-              className={`hp-tab${activeTab === 'ingredients' ? ' active' : ''}`}
-              onClick={() => setActiveTab('ingredients')}
-            >
+            <button className={`hp-tab${activeTab === 'ingredients' ? ' active' : ''}`} onClick={() => setActiveTab('ingredients')}>
               Ingredients
             </button>
-            <button
-              className={`hp-tab${activeTab === 'rules' ? ' active' : ''}`}
-              onClick={() => setActiveTab('rules')}
-            >
+            <button className={`hp-tab${activeTab === 'rules' ? ' active' : ''}`} onClick={() => setActiveTab('rules')}>
               Rules
             </button>
           </div>
 
-          {/* Countdown timer */}
+          {/* Countdown */}
           {timeLeftMs !== null && totalMs && (
             <div className={`hp-timer ${timerClass}`}>
-              <div className={`hp-timer-label ${timerClass}`}>
-                {isExpired ? "Time's Up" : 'Time Remaining'}
-              </div>
-              <div className={`hp-timer-value ${timerClass}`}>
-                {isExpired ? '0:00' : formatCountdown(timeLeftMs)}
-              </div>
-              {isWarning && !isExpired && (
-                <div className="hp-timer-warning-msg warning">
-                  Head back now — late returns cost ingredients.
-                </div>
-              )}
-              {isExpired && (
-                <div className="hp-timer-warning-msg expired">
-                  Return immediately to avoid penalties!
-                </div>
-              )}
+              <div className={`hp-timer-label ${timerClass}`}>{isExpired ? "Time's Up" : 'Time Remaining'}</div>
+              <div className={`hp-timer-value ${timerClass}`}>{isExpired ? '0:00' : formatCountdown(timeLeftMs)}</div>
+              {isWarning && !isExpired && <div className="hp-timer-warning-msg warning">Head back now — late returns cost ingredients.</div>}
+              {isExpired && <div className="hp-timer-warning-msg expired">Return immediately to avoid penalties!</div>}
             </div>
           )}
 
@@ -263,7 +241,7 @@ export default function Team() {
           {activeTab === 'rules' && (
             <div>
               {rules
-                ? <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '0.95rem', color: '#2a1305', lineHeight: 1.7, whiteSpace: 'pre-wrap', position: 'relative' }}>{rules}</p>
+                ? <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '0.95rem', color: '#1a0a03', lineHeight: 1.7, whiteSpace: 'pre-wrap', position: 'relative' }}>{rules}</p>
                 : <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', color: 'rgba(35,16,5,0.32)', fontSize: '0.9rem', position: 'relative' }}>No rules have been posted yet.</p>
               }
             </div>
@@ -274,10 +252,7 @@ export default function Team() {
               {/* Packet messages */}
               {showPacket2 && (
                 <div className="hp-packet p2">
-                  <button
-                    className="hp-packet-btn"
-                    onClick={() => setPacket2Collapsed(c => { const next = !c; localStorage.setItem('wh_packet2_collapsed', String(next)); return next })}
-                  >
+                  <button className="hp-packet-btn" onClick={() => setPacket2Collapsed(c => { const next = !c; localStorage.setItem('wh_packet2_collapsed', String(next)); return next })}>
                     <span className="hp-packet-title">Packet 2 Available</span>
                     <span className="hp-packet-toggle">{packet2Collapsed ? '▼ show' : '▲ hide'}</span>
                   </button>
@@ -286,10 +261,7 @@ export default function Team() {
               )}
               {showPacket3 && (
                 <div className="hp-packet p3">
-                  <button
-                    className="hp-packet-btn"
-                    onClick={() => setPacket3Collapsed(c => { const next = !c; localStorage.setItem('wh_packet3_collapsed', String(next)); return next })}
-                  >
+                  <button className="hp-packet-btn" onClick={() => setPacket3Collapsed(c => { const next = !c; localStorage.setItem('wh_packet3_collapsed', String(next)); return next })}>
                     <span className="hp-packet-title">Packet 3 Available</span>
                     <span className="hp-packet-toggle">{packet3Collapsed ? '▼ show' : '▲ hide'}</span>
                   </button>
@@ -312,6 +284,9 @@ export default function Team() {
                 </div>
               )}
 
+              {/* Second fold crease — midway through content */}
+              <div className="parchment-crease" style={{ margin: '4px -30px 14px' }} />
+
               {/* Ingredient slots */}
               <div>
                 {SLOTS.map(slot => {
@@ -320,17 +295,14 @@ export default function Team() {
                   const hasAnswer = (ans?.submitted_answer || '').trim().length > 0
                   const slotHintReq = hintRequests.find(h => h.keyword_slot === slot)
                   const hintAlreadyUsed = !!slotHintReq
-                  const hintVisible = !!revealedHints[slot]
 
                   return (
                     <div key={slot} className={`ingredient-slot${hasAnswer ? ' has-answer' : ''}`}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-                        <span className="hp-label">
-                          {kw?.display_label || `Ingredient ${slot}`}
-                        </span>
+                        <span className="hp-label">{kw?.display_label || `Ingredient ${slot}`}</span>
                         <span style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '0.73rem' }}>
                           {saveErrors[slot]
-                            ? <span style={{ color: '#8b1a1a' }}>{saveErrors[slot]}</span>
+                            ? <span style={{ color: '#7a1414' }}>{saveErrors[slot]}</span>
                             : saving[slot]
                               ? <span style={{ color: 'rgba(35,16,5,0.3)' }}>saving…</span>
                               : hasAnswer
@@ -347,17 +319,14 @@ export default function Team() {
                         disabled={done}
                       />
 
-                      {/* Hint area */}
                       {kw?.has_hint && (
                         <div>
                           {hintAlreadyUsed ? (
-                            hintVisible ? (
+                            revealedHints[slot] ? (
                               <div className="hp-hint-box">
                                 <div className="hp-hint-label">Hint</div>
                                 <div className="hp-hint-text">{revealedHints[slot]}</div>
-                                <div className="hp-hint-sub">
-                                  If this doesn't help, contact Race Command with a screenshot and what you've tried.
-                                </div>
+                                <div className="hp-hint-sub">If this doesn't help, contact Race Command with a screenshot and what you've tried.</div>
                               </div>
                             ) : (
                               <span className="hp-hint-limit">Loading hint…</span>
@@ -365,10 +334,7 @@ export default function Team() {
                           ) : totalHints >= 3 ? (
                             <span className="hp-hint-limit">Hint limit reached</span>
                           ) : (
-                            <button
-                              className="hp-hint-link"
-                              onClick={() => setConfirmHint({ slot, nextNumber: totalHints + 1 })}
-                            >
+                            <button className="hp-hint-link" onClick={() => setConfirmHint({ slot, nextNumber: totalHints + 1 })}>
                               Ask for a hint →
                             </button>
                           )}
@@ -390,9 +356,7 @@ export default function Team() {
                       <div key={adj.id} className={`hp-adj ${isBonus ? 'bonus' : 'penalty'}`}>
                         <span className="hp-adj-text">
                           {isBonus ? '▲' : '▼'}{' '}
-                          {isTime
-                            ? `${adj.amount} min time ${isBonus ? 'bonus' : 'penalty'}`
-                            : `${adj.amount} ingredient ${isBonus ? 'bonus' : 'penalty'}`}
+                          {isTime ? `${adj.amount} min time ${isBonus ? 'bonus' : 'penalty'}` : `${adj.amount} ingredient ${isBonus ? 'bonus' : 'penalty'}`}
                         </span>
                         {adj.reason && <span className="hp-adj-reason">{adj.reason}</span>}
                       </div>
@@ -403,23 +367,17 @@ export default function Team() {
             </>
           )}
 
-          <hr className="hp-divider" style={{ marginTop: 24 }} />
-          <button
-            className="hp-ghost-link"
-            onClick={() => { localStorage.removeItem('wh_team'); navigate('/') }}
-          >
+          <hr className="hp-divider" style={{ marginTop: 28 }} />
+          <button className="hp-ghost-link" onClick={() => { localStorage.removeItem('wh_team'); navigate('/') }}>
             Leave team
           </button>
         </div>
-
-        {/* Bottom rod */}
-        <div className="scroll-rod bottom" />
       </div>
 
       {/* Hint confirmation modal */}
       {confirmHint && (
         <div className="hp-modal-overlay">
-          <div className="hp-modal">
+          <div className="hp-modal parchment">
             <div className={`hp-modal-title ${confirmHint.nextNumber === 1 ? 'free' : confirmHint.nextNumber === 2 ? 'warn' : 'danger'}`}>
               {confirmHint.nextNumber === 1 ? 'Your Free Hint' :
                confirmHint.nextNumber === 2 ? 'Hint — +5 Minute Penalty' :
@@ -433,19 +391,11 @@ export default function Team() {
                   : "This is your last available hint. It will add 10 minutes to your team's adjusted time."}
             </div>
             <div className="hp-modal-warning">
-              <div className="hp-modal-warning-text">
-                Make this a team decision. The penalty is applied the moment you confirm.
-              </div>
+              <div className="hp-modal-warning-text">Make this a team decision. The penalty is applied the moment you confirm.</div>
             </div>
             <div className="hp-modal-actions">
-              <button className="hp-btn-cancel" onClick={() => setConfirmHint(null)}>
-                Cancel
-              </button>
-              <button
-                className="hp-btn-confirm"
-                onClick={confirmAndGetHint}
-                disabled={hintLoading}
-              >
+              <button className="hp-btn-cancel" onClick={() => setConfirmHint(null)}>Cancel</button>
+              <button className="hp-btn-confirm" onClick={confirmAndGetHint} disabled={hintLoading}>
                 {hintLoading ? 'Fetching…' : 'Reveal Hint →'}
               </button>
             </div>
