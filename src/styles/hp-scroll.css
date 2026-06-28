@@ -1,0 +1,574 @@
+/* ── HP Scroll & Parchment Design System ── */
+
+/* === Page === */
+.hp-page {
+  min-height: 100vh;
+  background: radial-gradient(ellipse at 50% 40%, #1e1308 0%, #0d0a06 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  overflow-x: hidden;
+}
+.hp-page-scroll {
+  min-height: 100vh;
+  background: radial-gradient(ellipse at 50% 20%, #1e1308 0%, #0d0a06 100%);
+  padding: 32px 16px 48px;
+  overflow-x: hidden;
+}
+
+/* === Scroll container === */
+.scroll-wrap {
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  filter: drop-shadow(0 16px 48px rgba(0,0,0,0.85));
+  transition: opacity 0.1s;
+}
+.scroll-wrap.unrolling {
+  animation: scrollUnroll 0.72s cubic-bezier(0.4, 0, 0.8, 1) forwards;
+  pointer-events: none;
+}
+@keyframes scrollUnroll {
+  0%   { opacity: 1; transform: scaleY(1) translateY(0); }
+  35%  { opacity: 1; transform: scaleY(1.05) translateY(-4px); }
+  100% { opacity: 0; transform: scaleY(0.2) translateY(-40px); }
+}
+
+/* === Scroll rods (top / bottom cylinders) === */
+.scroll-rod {
+  height: 30px;
+  background: linear-gradient(
+    to bottom,
+    #1c0d05 0%,
+    #4d2810 18%,
+    #8c5428 42%,
+    #a8682e 54%,
+    #7a4a1e 72%,
+    #3d1f0a 100%
+  );
+  position: relative;
+  z-index: 2;
+}
+.scroll-rod.top {
+  border-radius: 50% 50% 0 0 / 15px 15px 0 0;
+  box-shadow: 0 -2px 6px rgba(0,0,0,0.7), inset 0 2px 0 rgba(255,210,120,0.07);
+}
+.scroll-rod.bottom {
+  border-radius: 0 0 50% 50% / 0 0 15px 15px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.8), inset 0 -2px 0 rgba(255,210,120,0.07);
+}
+.scroll-rod::after {
+  content: '';
+  position: absolute;
+  left: 8%; right: 8%;
+  top: 32%; height: 2px;
+  background: rgba(255,210,130,0.12);
+  border-radius: 50%;
+}
+
+/* === Parchment body === */
+.scroll-body {
+  background: linear-gradient(
+    to right,
+    #b08040 0%,
+    #c99850 2%,
+    #e8cf98 7%,
+    #f7eed8 16%,
+    #fdf6e3 32%,
+    #faf3dc 50%,
+    #fdf6e3 68%,
+    #f7eed8 84%,
+    #e8cf98 93%,
+    #c99850 98%,
+    #b08040 100%
+  );
+  position: relative;
+  padding: 28px 32px 24px;
+}
+.scroll-body::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    180deg,
+    transparent 0px, transparent 29px,
+    rgba(90,55,15,0.065) 29px, rgba(90,55,15,0.065) 30px
+  );
+  pointer-events: none;
+}
+
+/* === Typography === */
+.hp-title {
+  font-family: 'Cinzel', serif;
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: #231005;
+  text-align: center;
+  letter-spacing: 0.1em;
+  line-height: 1.15;
+  position: relative;
+}
+.hp-subtitle {
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  font-size: 0.88rem;
+  color: #6b3e1e;
+  text-align: center;
+  margin-top: 4px;
+  margin-bottom: 22px;
+  position: relative;
+}
+.hp-label {
+  font-family: 'Cinzel', serif;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: rgba(35,16,5,0.5);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  position: relative;
+}
+.hp-divider {
+  border: none;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(90,55,15,0.28), transparent);
+  margin: 16px 0;
+  position: relative;
+}
+
+/* === Inputs === */
+.hp-code-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1.5px solid rgba(90,55,15,0.45);
+  padding: 8px 4px;
+  font-family: 'Cinzel', serif;
+  font-size: 1.65rem;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.35em;
+  color: #1a0a03;
+  outline: none;
+  box-sizing: border-box;
+  caret-color: #6b3e1e;
+  transition: border-color 0.2s;
+  position: relative;
+}
+.hp-code-input::placeholder {
+  color: rgba(90,55,15,0.25);
+  letter-spacing: 0.15em;
+  font-weight: 400;
+}
+.hp-code-input:focus { border-bottom-color: rgba(50,20,0,0.75); }
+
+.hp-text-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(90,55,15,0.3);
+  padding: 5px 2px;
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  font-size: 1rem;
+  color: #1a0a03;
+  outline: none;
+  box-sizing: border-box;
+  caret-color: #6b3e1e;
+  transition: border-color 0.2s;
+  position: relative;
+}
+.hp-text-input::placeholder {
+  color: rgba(90,55,15,0.22);
+  font-style: italic;
+}
+.hp-text-input:focus { border-bottom-color: rgba(50,20,0,0.6); }
+.hp-text-input:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* === Buttons === */
+.hp-btn-primary {
+  width: 100%;
+  margin-top: 18px;
+  padding: 13px 16px;
+  background: linear-gradient(to bottom, #5c3317 0%, #3a1e0a 100%);
+  color: #f0ddb8;
+  font-family: 'Cinzel', serif;
+  font-size: 0.87rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  border: 1px solid #7a4a20;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background 0.2s, opacity 0.2s;
+  box-shadow: inset 0 1px 0 rgba(255,200,100,0.07), 0 2px 6px rgba(0,0,0,0.3);
+  position: relative;
+}
+.hp-btn-primary:disabled { opacity: 0.32; cursor: not-allowed; }
+.hp-btn-primary:not(:disabled):hover {
+  background: linear-gradient(to bottom, #7a4a28 0%, #5c3317 100%);
+}
+
+/* === Error === */
+.hp-error {
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  color: #8b1a1a;
+  font-size: 0.85rem;
+  text-align: center;
+  margin-top: 10px;
+  position: relative;
+}
+
+/* === Small links === */
+.hp-ghost-link {
+  display: block;
+  text-align: center;
+  font-family: 'Cinzel', serif;
+  font-size: 0.67rem;
+  color: rgba(35,16,5,0.3);
+  letter-spacing: 0.06em;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s;
+  position: relative;
+}
+.hp-ghost-link:hover { color: rgba(35,16,5,0.6); }
+
+/* === Ingredient slot === */
+.ingredient-slot {
+  background: rgba(200,160,90,0.1);
+  border: 1px solid rgba(90,55,15,0.2);
+  border-radius: 2px;
+  padding: 12px 14px 14px;
+  position: relative;
+  margin-bottom: 10px;
+}
+.ingredient-slot.has-answer {
+  background: rgba(200,160,90,0.17);
+  border-color: rgba(90,55,15,0.32);
+}
+
+/* === Parchment tabs === */
+.hp-tabs {
+  display: flex;
+  border-bottom: 1.5px solid rgba(90,55,15,0.2);
+  margin-bottom: 18px;
+  position: relative;
+}
+.hp-tab {
+  flex: 1;
+  padding: 8px 0;
+  font-family: 'Cinzel', serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-align: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s;
+  color: rgba(35,16,5,0.32);
+  position: relative;
+}
+.hp-tab.active {
+  color: #231005;
+  border-bottom: 2px solid #5c3317;
+  margin-bottom: -1.5px;
+}
+
+/* === Timer === */
+.hp-timer {
+  background: rgba(200,160,90,0.12);
+  border: 1px solid rgba(90,55,15,0.2);
+  border-radius: 2px;
+  padding: 12px 16px;
+  text-align: center;
+  margin-bottom: 16px;
+}
+.hp-timer.warning {
+  background: rgba(160,80,0,0.1);
+  border-color: rgba(160,80,0,0.3);
+}
+.hp-timer.expired {
+  background: rgba(140,20,20,0.1);
+  border-color: rgba(140,20,20,0.3);
+}
+.hp-timer-label {
+  font-family: 'Cinzel', serif;
+  font-size: 0.63rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(35,16,5,0.4);
+  margin-bottom: 4px;
+}
+.hp-timer-label.warning { color: rgba(140,70,0,0.85); }
+.hp-timer-label.expired { color: rgba(130,20,20,0.85); }
+.hp-timer-value {
+  font-family: 'Cinzel', serif;
+  font-size: 2.4rem;
+  font-weight: 700;
+  color: #1a0a03;
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+.hp-timer-value.warning { color: #7a3800; }
+.hp-timer-value.expired { color: #7a1414; }
+.hp-timer-warning-msg {
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  font-size: 0.82rem;
+  margin-top: 6px;
+}
+.hp-timer-warning-msg.warning { color: #7a3800; }
+.hp-timer-warning-msg.expired { color: #7a1414; }
+
+/* === Done banner === */
+.hp-done-banner {
+  background: rgba(20,70,30,0.12);
+  border: 1px solid rgba(20,70,30,0.28);
+  border-radius: 2px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+}
+.hp-done-title {
+  font-family: 'Cinzel', serif;
+  font-size: 0.8rem;
+  color: #163820;
+  margin-bottom: 3px;
+}
+.hp-done-sub {
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  font-size: 0.82rem;
+  color: rgba(22,56,32,0.7);
+}
+
+/* === Packet banners === */
+.hp-packet {
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 10px;
+  border: 1px solid;
+}
+.hp-packet.p2 { background: rgba(0,60,110,0.08); border-color: rgba(0,60,110,0.22); }
+.hp-packet.p3 { background: rgba(70,0,110,0.08); border-color: rgba(70,0,110,0.22); }
+.hp-packet-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  width: 100%;
+}
+.hp-packet-title {
+  font-family: 'Cinzel', serif;
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.p2 .hp-packet-title { color: rgba(0,60,130,0.8); }
+.p3 .hp-packet-title { color: rgba(70,0,130,0.8); }
+.hp-packet-toggle {
+  font-family: 'IM Fell English', serif;
+  font-size: 0.7rem;
+  color: rgba(90,55,15,0.4);
+  font-style: italic;
+}
+.hp-packet-body {
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  font-size: 0.9rem;
+  padding: 0 14px 12px;
+}
+.p2 .hp-packet-body { color: #001e5a; }
+.p3 .hp-packet-body { color: #32005a; }
+
+/* === Hint box === */
+.hp-hint-box {
+  margin-top: 10px;
+  background: rgba(50,20,100,0.09);
+  border: 1px solid rgba(50,20,100,0.22);
+  border-radius: 2px;
+  padding: 10px 12px;
+}
+.hp-hint-label {
+  font-family: 'Cinzel', serif;
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(50,20,100,0.55);
+  margin-bottom: 5px;
+}
+.hp-hint-text {
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  font-size: 0.95rem;
+  color: #1e0c60;
+}
+.hp-hint-sub {
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  font-size: 0.78rem;
+  color: rgba(30,12,96,0.5);
+  margin-top: 6px;
+}
+.hp-hint-link {
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  font-size: 0.85rem;
+  color: rgba(50,20,100,0.5);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.2s;
+  margin-top: 8px;
+  display: inline-block;
+}
+.hp-hint-link:hover { color: rgba(50,20,100,0.8); }
+.hp-hint-limit {
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  font-size: 0.82rem;
+  color: rgba(35,16,5,0.3);
+  margin-top: 8px;
+  display: inline-block;
+}
+
+/* === Adjustments === */
+.hp-adj {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 2px;
+  border: 1px solid;
+  margin-bottom: 6px;
+}
+.hp-adj.bonus { background: rgba(20,70,30,0.1); border-color: rgba(20,70,30,0.25); }
+.hp-adj.penalty { background: rgba(110,20,20,0.1); border-color: rgba(110,20,20,0.25); }
+.hp-adj-text {
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  font-size: 0.88rem;
+}
+.hp-adj.bonus .hp-adj-text { color: #163820; }
+.hp-adj.penalty .hp-adj-text { color: #5a1010; }
+.hp-adj-reason {
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  font-size: 0.76rem;
+  color: rgba(35,16,5,0.4);
+  margin-left: 8px;
+}
+
+/* === Hint confirm modal === */
+.hp-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.82);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 50;
+  padding: 16px;
+}
+@media (min-width: 640px) {
+  .hp-modal-overlay { align-items: center; }
+}
+.hp-modal {
+  background: linear-gradient(
+    to right,
+    #c99850 0%, #e8cf98 5%, #f7eed8 15%,
+    #fdf6e3 50%, #f7eed8 85%, #e8cf98 95%, #c99850 100%
+  );
+  border-radius: 2px;
+  padding: 24px 24px 20px;
+  width: 100%;
+  max-width: 360px;
+  position: relative;
+  filter: drop-shadow(0 8px 32px rgba(0,0,0,0.8));
+}
+.hp-modal::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    180deg, transparent 0px, transparent 29px,
+    rgba(90,55,15,0.065) 29px, rgba(90,55,15,0.065) 30px
+  );
+  pointer-events: none;
+  border-radius: 2px;
+}
+.hp-modal-title {
+  font-family: 'Cinzel', serif;
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  position: relative;
+}
+.hp-modal-title.free { color: #163050; }
+.hp-modal-title.warn { color: #7a3800; }
+.hp-modal-title.danger { color: #7a1414; }
+.hp-modal-body {
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  font-size: 0.9rem;
+  color: #2a1305;
+  margin-bottom: 12px;
+  position: relative;
+}
+.hp-modal-warning {
+  background: rgba(160,80,0,0.1);
+  border: 1px solid rgba(160,80,0,0.28);
+  border-radius: 2px;
+  padding: 10px 12px;
+  margin-bottom: 18px;
+  position: relative;
+}
+.hp-modal-warning-text {
+  font-family: 'IM Fell English', serif;
+  font-style: italic;
+  font-size: 0.86rem;
+  color: #7a3800;
+}
+.hp-modal-actions {
+  display: flex;
+  gap: 10px;
+  position: relative;
+}
+.hp-btn-cancel {
+  flex: 1;
+  padding: 11px;
+  background: rgba(90,55,15,0.12);
+  border: 1px solid rgba(90,55,15,0.3);
+  border-radius: 2px;
+  font-family: 'Cinzel', serif;
+  font-size: 0.8rem;
+  color: rgba(35,16,5,0.65);
+  cursor: pointer;
+  transition: background 0.2s;
+  letter-spacing: 0.06em;
+}
+.hp-btn-cancel:hover { background: rgba(90,55,15,0.2); }
+.hp-btn-confirm {
+  flex: 1;
+  padding: 11px;
+  background: linear-gradient(to bottom, #3d1a6e, #26104a);
+  border: 1px solid rgba(100,50,180,0.5);
+  border-radius: 2px;
+  font-family: 'Cinzel', serif;
+  font-size: 0.8rem;
+  color: #d4b8f8;
+  cursor: pointer;
+  transition: background 0.2s, opacity 0.2s;
+  letter-spacing: 0.06em;
+}
+.hp-btn-confirm:disabled { opacity: 0.4; cursor: not-allowed; }
+.hp-btn-confirm:not(:disabled):hover {
+  background: linear-gradient(to bottom, #5a28a0, #3d1a6e);
+}

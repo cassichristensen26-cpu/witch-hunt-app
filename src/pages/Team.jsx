@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { upsertAnswer, ensureAnonSession, requestHint } from '../lib/api'
 import { formatCountdown } from '../lib/scoring'
+import '../styles/hp-scroll.css'
 
 const SLOTS = [1, 2, 3, 4, 5, 6, 7, 8, 9]
 
@@ -20,13 +21,11 @@ export default function Team() {
   const [game, setGame] = useState(null)
   const [timeLeftMs, setTimeLeftMs] = useState(null)
 
-  // Hint state
-  const [hintRequests, setHintRequests] = useState([]) // { keyword_slot, hint_number }[]
-  const [revealedHints, setRevealedHints] = useState({}) // { [slot]: string }
-  const [confirmHint, setConfirmHint] = useState(null) // { slot, nextNumber } | null
+  const [hintRequests, setHintRequests] = useState([])
+  const [revealedHints, setRevealedHints] = useState({})
+  const [confirmHint, setConfirmHint] = useState(null)
   const [hintLoading, setHintLoading] = useState(false)
 
-  // Packet collapse state — persisted across reloads
   const [packet2Collapsed, setPacket2Collapsed] = useState(
     () => localStorage.getItem('wh_packet2_collapsed') === 'true'
   )
@@ -55,7 +54,6 @@ export default function Team() {
     return () => cleanup()
   }, [])
 
-  // Auto-fetch hint text for any already-requested slots
   useEffect(() => {
     if (!teamData?.teamId || hintRequests.length === 0) return
     for (const req of hintRequests) {
@@ -69,7 +67,6 @@ export default function Team() {
     }
   }, [hintRequests])
 
-  // Countdown tick
   useEffect(() => {
     if (!game?.start_time || !game?.duration_minutes) return
     const endTime = new Date(game.start_time).getTime() + game.duration_minutes * 60000
@@ -180,7 +177,7 @@ export default function Team() {
     }
   }
 
-const kwFor = (slot) => keywords.find(k => k.slot_number === slot)
+  const kwFor = (slot) => keywords.find(k => k.slot_number === slot)
   const totalHints = hintRequests.length
 
   const allAdj = adjustments.filter(a =>
@@ -188,283 +185,268 @@ const kwFor = (slot) => keywords.find(k => k.slot_number === slot)
     a.type === 'keyword_bonus' || a.type === 'keyword_penalty'
   )
 
-  // Countdown state
   const totalMs = game?.duration_minutes ? game.duration_minutes * 60000 : null
   const warningThresholdMs = totalMs ? totalMs / 9 : null
   const isExpired = timeLeftMs !== null && timeLeftMs <= 0
   const isWarning = !isExpired && timeLeftMs !== null && warningThresholdMs !== null && timeLeftMs <= warningThresholdMs
 
-  // Packet pickup message conditions (correctCount comes from server-side RPC)
   const timeElapsedFraction = (timeLeftMs !== null && totalMs)
-    ? Math.max(0, 1 - timeLeftMs / totalMs)
-    : 0
+    ? Math.max(0, 1 - timeLeftMs / totalMs) : 0
   const showPacket2 = !!(game?.packet2_message && (correctCount >= 3 || timeElapsedFraction >= 1 / 3))
   const showPacket3 = !!(game?.packet3_message && (correctCount >= 6 || timeElapsedFraction >= 2 / 3))
 
+  const timerClass = isExpired ? 'expired' : isWarning ? 'warning' : ''
+
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
-      <div className="max-w-md mx-auto px-4 py-6 pb-16">
-        {/* Header */}
-        <div className="mb-4">
-          <h1 className="text-xl font-bold text-purple-300">{game?.name || teamData?.gameName}</h1>
-          <p className="text-gray-500 text-sm">
-            Team: <span className="text-white font-semibold">{teamData?.teamName}</span>
-            <span className="ml-2 text-gray-700 font-mono text-xs">{teamData?.joinCode}</span>
-          </p>
-        </div>
+    <div className="hp-page-scroll">
+      <div className="scroll-wrap" style={{ filter: 'drop-shadow(0 16px 48px rgba(0,0,0,0.85))' }}>
+        {/* Top rod */}
+        <div className="scroll-rod top" />
 
-        {/* Tab bar */}
-        <div className="flex gap-1 mb-5 bg-gray-900 rounded-xl p-1">
-          <button
-            onClick={() => setActiveTab('ingredients')}
-            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${
-              activeTab === 'ingredients'
-                ? 'bg-gray-800 text-white'
-                : 'text-gray-600 hover:text-gray-400'
-            }`}
-          >
-            Ingredients
-          </button>
-          <button
-            onClick={() => setActiveTab('rules')}
-            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors ${
-              activeTab === 'rules'
-                ? 'bg-gray-800 text-white'
-                : 'text-gray-600 hover:text-gray-400'
-            }`}
-          >
-            Rules
-          </button>
-        </div>
+        {/* Parchment body */}
+        <div className="scroll-body">
 
-        {/* Countdown timer */}
-        {timeLeftMs !== null && totalMs && (
-          <div className={`mb-5 rounded-2xl px-5 py-4 border text-center transition-colors ${
-            isExpired ? 'bg-red-950 border-red-800' :
-            isWarning ? 'bg-yellow-950 border-yellow-800' :
-            'bg-gray-900 border-gray-800'
-          }`}>
-            <p className={`text-xs font-semibold uppercase tracking-wider mb-1 ${
-              isExpired ? 'text-red-400' : isWarning ? 'text-yellow-400' : 'text-gray-500'
-            }`}>
-              {isExpired ? "Time's up!" : 'Time remaining'}
-            </p>
-            <p className={`text-4xl font-mono font-bold ${
-              isExpired ? 'text-red-400' : isWarning ? 'text-yellow-300' : 'text-white'
-            }`}>
-              {isExpired ? '0:00' : formatCountdown(timeLeftMs)}
-            </p>
-            {isWarning && !isExpired && (
-              <p className="mt-2 text-yellow-400 text-sm font-medium">
-                ⚠️ Head back now! Late returns are penalized ingredients.
-              </p>
-            )}
-            {isExpired && (
-              <p className="mt-2 text-red-300 text-sm">
-                Head back immediately to avoid ingredient penalties!
-              </p>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'rules' && (
-          <div className="rounded-2xl bg-gray-900 border border-gray-800 px-5 py-4 min-h-40">
-            {rules
-              ? <p className="text-gray-200 text-sm leading-relaxed whitespace-pre-wrap">{rules}</p>
-              : <p className="text-gray-700 text-sm italic">No rules have been posted yet.</p>
-            }
-          </div>
-        )}
-
-        {/* Packet pickup messages */}
-        {activeTab === 'ingredients' && showPacket2 && (
-          <div className="mb-3 rounded-2xl border bg-cyan-950 border-cyan-800 overflow-hidden">
-            <button
-              onClick={() => setPacket2Collapsed(c => { const next = !c; localStorage.setItem('wh_packet2_collapsed', String(next)); return next })}
-              className="w-full flex items-center justify-between px-5 py-3 text-left"
-            >
-              <p className="text-xs font-semibold text-cyan-400 uppercase tracking-wider">Packet 2 Available</p>
-              <span className="text-cyan-700 text-xs ml-3 shrink-0">{packet2Collapsed ? '▼ show' : '▲ hide'}</span>
-            </button>
-            {!packet2Collapsed && (
-              <p className="text-cyan-100 text-sm px-5 pb-4">{game.packet2_message}</p>
-            )}
-          </div>
-        )}
-        {activeTab === 'ingredients' && showPacket3 && (
-          <div className="mb-3 rounded-2xl border bg-violet-950 border-violet-800 overflow-hidden">
-            <button
-              onClick={() => setPacket3Collapsed(c => { const next = !c; localStorage.setItem('wh_packet3_collapsed', String(next)); return next })}
-              className="w-full flex items-center justify-between px-5 py-3 text-left"
-            >
-              <p className="text-xs font-semibold text-violet-400 uppercase tracking-wider">Packet 3 Available</p>
-              <span className="text-violet-700 text-xs ml-3 shrink-0">{packet3Collapsed ? '▼ show' : '▲ hide'}</span>
-            </button>
-            {!packet3Collapsed && (
-              <p className="text-violet-100 text-sm px-5 pb-4">{game.packet3_message}</p>
-            )}
-          </div>
-        )}
-
-        {/* Done banner */}
-        {activeTab === 'ingredients' && done && (
-          <div className="mb-5 bg-green-950 border border-green-800 rounded-xl px-4 py-3">
-            <p className="text-green-300 text-sm font-semibold mb-1">✓ Your team has been marked as finished!</p>
-            <p className="text-green-600 text-xs">Scores are being calculated. Your answers are now locked — no further changes can be made.</p>
-          </div>
-        )}
-
-        {/* Hint usage indicator */}
-        {activeTab === 'ingredients' && totalHints > 0 && (
-          <div className="mb-4 text-xs text-gray-600 text-right">
-            {totalHints}/3 hints used
-            {totalHints === 3 && <span className="text-red-500 ml-1">· no more hints available</span>}
-          </div>
-        )}
-
-        {/* Ingredient slots */}
-        {activeTab === 'ingredients' && <div className="space-y-3">
-          {SLOTS.map(slot => {
-            const kw = kwFor(slot)
-            const ans = answers[slot]
-            const hasAnswer = (ans?.submitted_answer || '').trim().length > 0
-            const slotHintReq = hintRequests.find(h => h.keyword_slot === slot)
-            const hintAlreadyUsed = !!slotHintReq
-            const hintVisible = !!revealedHints[slot]
-
-            return (
-              <div key={slot} className="rounded-2xl p-4 border bg-gray-900 border-gray-800">
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-medium text-gray-400">
-                    {kw?.display_label || `Ingredient ${slot}`}
-                  </label>
-                  <span className="text-xs">
-                    {saveErrors[slot]
-                      ? <span className="text-red-400">{saveErrors[slot]}</span>
-                      : saving[slot]
-                        ? <span className="text-gray-600">saving…</span>
-                        : hasAnswer
-                          ? <span className="text-gray-600">saved</span>
-                          : null}
-                  </span>
-                </div>
-                <input
-                  type="text"
-                  value={ans?.submitted_answer || ''}
-                  onChange={e => handleChange(slot, e.target.value)}
-                  placeholder={done ? 'Answers locked' : 'Type ingredient here…'}
-                  disabled={done}
-                  className="w-full rounded-xl px-4 py-3 text-white text-base placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500 bg-gray-800 border border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                />
-
-                {/* Hint area */}
-                {kw?.has_hint && (
-                  <div className="mt-3">
-                    {hintAlreadyUsed ? (
-                      revealedHints[slot] ? (
-                        <div className="bg-indigo-950 border border-indigo-800 rounded-xl p-3">
-                          <p className="text-xs text-indigo-400 font-semibold uppercase tracking-wider mb-2">Hint</p>
-                          <p className="text-indigo-100 text-sm">{revealedHints[slot]}</p>
-                          <p className="mt-3 text-xs text-gray-600 leading-relaxed">
-                            If this clue doesn't help you solve the puzzle, text Race Command with a screenshot of this clue and an explanation of what you have tried so far.
-                          </p>
-                        </div>
-                      ) : (
-                        <p className="text-xs text-indigo-700">Loading hint…</p>
-                      )
-                    ) : totalHints >= 3 ? (
-                      <span className="text-xs text-gray-700 cursor-not-allowed">Hint limit reached</span>
-                    ) : (
-                      <button
-                        onClick={() => setConfirmHint({ slot, nextNumber: totalHints + 1 })}
-                        className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
-                      >
-                        Ask for a hint →
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>}
-
-        {/* Adjustments */}
-        {allAdj.length > 0 && (
-          <div className="mt-8">
-            <h2 className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-3">
-              Adjustments from moderator
-            </h2>
-            <div className="space-y-2">
-              {allAdj.map(adj => {
-                const isBonus = adj.type.includes('bonus')
-                const isTime = adj.type.includes('time')
-                return (
-                  <div key={adj.id} className={`flex items-center justify-between rounded-xl px-4 py-3 text-sm border ${
-                    isBonus ? 'bg-green-950 border-green-800 text-green-300' : 'bg-red-950 border-red-800 text-red-300'
-                  }`}>
-                    <span>
-                      {isBonus ? '▲' : '▼'}{' '}
-                      {isTime ? `${adj.amount} min time ${isBonus ? 'bonus' : 'penalty'}` : `${adj.amount} ingredient ${isBonus ? 'bonus' : 'penalty'}`}
-                    </span>
-                    {adj.reason && <span className="text-gray-500 text-xs ml-2">{adj.reason}</span>}
-                  </div>
-                )
-              })}
+          {/* Header */}
+          <div style={{ marginBottom: 6 }}>
+            <div className="hp-title" style={{ fontSize: '1.3rem', textAlign: 'left' }}>
+              {game?.name || teamData?.gameName}
+            </div>
+            <div className="hp-subtitle" style={{ textAlign: 'left', margin: '2px 0 0' }}>
+              Team: <strong style={{ fontStyle: 'normal', color: '#2a1305' }}>{teamData?.teamName}</strong>
+              <span style={{ fontFamily: "'Cinzel', serif", fontSize: '0.68rem', color: 'rgba(90,55,15,0.4)', marginLeft: 8, letterSpacing: '0.1em', fontStyle: 'normal' }}>
+                {teamData?.joinCode}
+              </span>
             </div>
           </div>
-        )}
 
-        <div className="mt-10 text-center">
+          <hr className="hp-divider" />
+
+          {/* Tabs */}
+          <div className="hp-tabs">
+            <button
+              className={`hp-tab${activeTab === 'ingredients' ? ' active' : ''}`}
+              onClick={() => setActiveTab('ingredients')}
+            >
+              Ingredients
+            </button>
+            <button
+              className={`hp-tab${activeTab === 'rules' ? ' active' : ''}`}
+              onClick={() => setActiveTab('rules')}
+            >
+              Rules
+            </button>
+          </div>
+
+          {/* Countdown timer */}
+          {timeLeftMs !== null && totalMs && (
+            <div className={`hp-timer ${timerClass}`}>
+              <div className={`hp-timer-label ${timerClass}`}>
+                {isExpired ? "Time's Up" : 'Time Remaining'}
+              </div>
+              <div className={`hp-timer-value ${timerClass}`}>
+                {isExpired ? '0:00' : formatCountdown(timeLeftMs)}
+              </div>
+              {isWarning && !isExpired && (
+                <div className="hp-timer-warning-msg warning">
+                  Head back now — late returns cost ingredients.
+                </div>
+              )}
+              {isExpired && (
+                <div className="hp-timer-warning-msg expired">
+                  Return immediately to avoid penalties!
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Rules tab */}
+          {activeTab === 'rules' && (
+            <div>
+              {rules
+                ? <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '0.95rem', color: '#2a1305', lineHeight: 1.7, whiteSpace: 'pre-wrap', position: 'relative' }}>{rules}</p>
+                : <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', color: 'rgba(35,16,5,0.32)', fontSize: '0.9rem', position: 'relative' }}>No rules have been posted yet.</p>
+              }
+            </div>
+          )}
+
+          {activeTab === 'ingredients' && (
+            <>
+              {/* Packet messages */}
+              {showPacket2 && (
+                <div className="hp-packet p2">
+                  <button
+                    className="hp-packet-btn"
+                    onClick={() => setPacket2Collapsed(c => { const next = !c; localStorage.setItem('wh_packet2_collapsed', String(next)); return next })}
+                  >
+                    <span className="hp-packet-title">Packet 2 Available</span>
+                    <span className="hp-packet-toggle">{packet2Collapsed ? '▼ show' : '▲ hide'}</span>
+                  </button>
+                  {!packet2Collapsed && <p className="hp-packet-body">{game.packet2_message}</p>}
+                </div>
+              )}
+              {showPacket3 && (
+                <div className="hp-packet p3">
+                  <button
+                    className="hp-packet-btn"
+                    onClick={() => setPacket3Collapsed(c => { const next = !c; localStorage.setItem('wh_packet3_collapsed', String(next)); return next })}
+                  >
+                    <span className="hp-packet-title">Packet 3 Available</span>
+                    <span className="hp-packet-toggle">{packet3Collapsed ? '▼ show' : '▲ hide'}</span>
+                  </button>
+                  {!packet3Collapsed && <p className="hp-packet-body">{game.packet3_message}</p>}
+                </div>
+              )}
+
+              {/* Done banner */}
+              {done && (
+                <div className="hp-done-banner">
+                  <div className="hp-done-title">✦ Your team has been marked as finished</div>
+                  <div className="hp-done-sub">Scores are being tallied. Your answers are now sealed.</div>
+                </div>
+              )}
+
+              {/* Hint usage */}
+              {totalHints > 0 && (
+                <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '0.78rem', color: 'rgba(35,16,5,0.38)', textAlign: 'right', marginBottom: 12, position: 'relative' }}>
+                  {totalHints}/3 hints used{totalHints === 3 && ' · no more available'}
+                </div>
+              )}
+
+              {/* Ingredient slots */}
+              <div>
+                {SLOTS.map(slot => {
+                  const kw = kwFor(slot)
+                  const ans = answers[slot]
+                  const hasAnswer = (ans?.submitted_answer || '').trim().length > 0
+                  const slotHintReq = hintRequests.find(h => h.keyword_slot === slot)
+                  const hintAlreadyUsed = !!slotHintReq
+                  const hintVisible = !!revealedHints[slot]
+
+                  return (
+                    <div key={slot} className={`ingredient-slot${hasAnswer ? ' has-answer' : ''}`}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+                        <span className="hp-label">
+                          {kw?.display_label || `Ingredient ${slot}`}
+                        </span>
+                        <span style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '0.73rem' }}>
+                          {saveErrors[slot]
+                            ? <span style={{ color: '#8b1a1a' }}>{saveErrors[slot]}</span>
+                            : saving[slot]
+                              ? <span style={{ color: 'rgba(35,16,5,0.3)' }}>saving…</span>
+                              : hasAnswer
+                                ? <span style={{ color: 'rgba(35,16,5,0.28)' }}>saved</span>
+                                : null}
+                        </span>
+                      </div>
+                      <input
+                        className="hp-text-input"
+                        type="text"
+                        value={ans?.submitted_answer || ''}
+                        onChange={e => handleChange(slot, e.target.value)}
+                        placeholder={done ? 'Answers sealed' : 'Write your answer here…'}
+                        disabled={done}
+                      />
+
+                      {/* Hint area */}
+                      {kw?.has_hint && (
+                        <div>
+                          {hintAlreadyUsed ? (
+                            hintVisible ? (
+                              <div className="hp-hint-box">
+                                <div className="hp-hint-label">Hint</div>
+                                <div className="hp-hint-text">{revealedHints[slot]}</div>
+                                <div className="hp-hint-sub">
+                                  If this doesn't help, contact Race Command with a screenshot and what you've tried.
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="hp-hint-limit">Loading hint…</span>
+                            )
+                          ) : totalHints >= 3 ? (
+                            <span className="hp-hint-limit">Hint limit reached</span>
+                          ) : (
+                            <button
+                              className="hp-hint-link"
+                              onClick={() => setConfirmHint({ slot, nextNumber: totalHints + 1 })}
+                            >
+                              Ask for a hint →
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Adjustments */}
+              {allAdj.length > 0 && (
+                <div style={{ marginTop: 24 }}>
+                  <div className="hp-label" style={{ marginBottom: 10 }}>Adjustments from Moderator</div>
+                  {allAdj.map(adj => {
+                    const isBonus = adj.type.includes('bonus')
+                    const isTime = adj.type.includes('time')
+                    return (
+                      <div key={adj.id} className={`hp-adj ${isBonus ? 'bonus' : 'penalty'}`}>
+                        <span className="hp-adj-text">
+                          {isBonus ? '▲' : '▼'}{' '}
+                          {isTime
+                            ? `${adj.amount} min time ${isBonus ? 'bonus' : 'penalty'}`
+                            : `${adj.amount} ingredient ${isBonus ? 'bonus' : 'penalty'}`}
+                        </span>
+                        {adj.reason && <span className="hp-adj-reason">{adj.reason}</span>}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </>
+          )}
+
+          <hr className="hp-divider" style={{ marginTop: 24 }} />
           <button
+            className="hp-ghost-link"
             onClick={() => { localStorage.removeItem('wh_team'); navigate('/') }}
-            className="text-gray-800 hover:text-gray-600 text-xs transition-colors"
           >
             Leave team
           </button>
         </div>
+
+        {/* Bottom rod */}
+        <div className="scroll-rod bottom" />
       </div>
 
       {/* Hint confirmation modal */}
       {confirmHint && (
-        <div className="fixed inset-0 bg-black/80 flex items-end sm:items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 border border-gray-700 rounded-2xl p-6 w-full max-w-sm">
-            <h3 className={`text-lg font-bold mb-2 ${
-              confirmHint.nextNumber === 1 ? 'text-indigo-300' :
-              confirmHint.nextNumber === 2 ? 'text-yellow-300' : 'text-red-300'
-            }`}>
+        <div className="hp-modal-overlay">
+          <div className="hp-modal">
+            <div className={`hp-modal-title ${confirmHint.nextNumber === 1 ? 'free' : confirmHint.nextNumber === 2 ? 'warn' : 'danger'}`}>
               {confirmHint.nextNumber === 1 ? 'Your Free Hint' :
                confirmHint.nextNumber === 2 ? 'Hint — +5 Minute Penalty' :
                'Final Hint — +10 Minute Penalty'}
-            </h3>
-
-            <p className="text-gray-300 text-sm mb-3">
+            </div>
+            <div className="hp-modal-body">
               {confirmHint.nextNumber === 1
-                ? "This is your team's only free hint. Hints 2 and 3 each add time to your score."
+                ? "This is your team's only free hint. Subsequent hints add time to your score."
                 : confirmHint.nextNumber === 2
                   ? "Using this hint will add 5 minutes to your team's adjusted time."
                   : "This is your last available hint. It will add 10 minutes to your team's adjusted time."}
-            </p>
-
-            <div className="bg-yellow-950 border border-yellow-800 rounded-xl px-4 py-3 mb-5">
-              <p className="text-yellow-300 text-sm font-medium">
-                Make sure this is a team decision before proceeding. Once confirmed, the penalty is applied immediately.
-              </p>
             </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setConfirmHint(null)}
-                className="flex-1 py-3 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 font-medium transition-colors"
-              >
+            <div className="hp-modal-warning">
+              <div className="hp-modal-warning-text">
+                Make this a team decision. The penalty is applied the moment you confirm.
+              </div>
+            </div>
+            <div className="hp-modal-actions">
+              <button className="hp-btn-cancel" onClick={() => setConfirmHint(null)}>
                 Cancel
               </button>
               <button
+                className="hp-btn-confirm"
                 onClick={confirmAndGetHint}
                 disabled={hintLoading}
-                className="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-800 text-white font-semibold transition-colors"
               >
-                {hintLoading ? 'Getting hint…' : 'Show Hint →'}
+                {hintLoading ? 'Fetching…' : 'Reveal Hint →'}
               </button>
             </div>
           </div>
