@@ -88,9 +88,6 @@
   width: 100%;
   max-width: 380px;
   margin: 0 auto;
-  /* Perspective here so direct children get 3D */
-  perspective: 700px;
-  perspective-origin: 50% 30%;
 }
 
 /* Center panel — always visible, login form */
@@ -99,10 +96,10 @@
   z-index: 2;
   padding: 40px 32px 32px;
   box-shadow:
-    0 -8px 32px rgba(0,0,0,0.6),
-    0  8px 32px rgba(0,0,0,0.6),
-    4px 0 24px rgba(0,0,0,0.4),
-    -4px 0 24px rgba(0,0,0,0.4);
+    0 -4px 28px rgba(0,0,0,0.55),
+    0  4px 28px rgba(0,0,0,0.55),
+    4px 0 18px rgba(0,0,0,0.32),
+    -4px 0 18px rgba(0,0,0,0.32);
 }
 
 /* Fold crease lines at top and bottom of center panel */
@@ -135,38 +132,36 @@
 }
 
 /* Fold flaps
-   ─ Top flap: starts at rotateX(-150deg)
-     (in front of center, covering top portion)
-     → opens to rotateX(0deg) (flat above center)
-   ─ Bottom flap: starts at rotateX(150deg)
-     → opens to rotateX(0deg) (flat below center)
+   Start at scaleY(0) — invisible thin line at the fold edge.
+   On .open: scale up to full height, growing away from fold line.
+   Uses 2D scaling (no 3D) to avoid CSS stacking context conflicts.
 */
 .parchment-flap {
   position: absolute;
   left: 0; right: 0;
   height: 240px;
-  z-index: 5;
-  will-change: transform;
+  z-index: 1;
+  overflow: hidden;
 }
 
 .parchment-flap.top {
   bottom: 100%;
   transform-origin: bottom center;
-  transform: rotateX(-150deg);
-  transition: transform 1.6s cubic-bezier(0.4, 0.0, 0.2, 1.0) 0s;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.55);
+  transform: scaleY(0);
+  transition: transform 1.4s cubic-bezier(0.22, 1.0, 0.36, 1.0) 0s;
+  box-shadow: 0 -6px 20px rgba(0,0,0,0.45);
 }
 .parchment-flap.bottom {
   top: 100%;
   transform-origin: top center;
-  transform: rotateX(150deg);
-  transition: transform 1.5s cubic-bezier(0.4, 0.0, 0.2, 1.0) 0.45s;
-  box-shadow: 0 -8px 24px rgba(0,0,0,0.55);
+  transform: scaleY(0);
+  transition: transform 1.3s cubic-bezier(0.22, 1.0, 0.36, 1.0) 0.35s;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.45);
 }
 
-/* Open state — flaps unfold flat */
-.parchment-scene.open .parchment-flap.top    { transform: rotateX(0deg); }
-.parchment-scene.open .parchment-flap.bottom { transform: rotateX(0deg); }
+/* Open state — flaps unfold to full height */
+.parchment-scene.open .parchment-flap.top    { transform: scaleY(1); }
+.parchment-scene.open .parchment-flap.bottom { transform: scaleY(1); }
 
 /* ─────────────────────────────────────────────
    FLAT PARCHMENT — Team page (fully unfolded)
