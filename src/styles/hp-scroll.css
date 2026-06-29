@@ -7,11 +7,13 @@
    ───────────────────────────────────────────── */
 
 .parchment {
-  background-color: #e8dfc4;
-  background-image: url('/parchment-texture.jpg');
+  background-color: #f0ead8;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.32), rgba(255,255,255,0.32)),
+    url('/parchment-texture.jpg');
   background-size: cover;
   background-position: center center;
-  box-shadow: inset 0 0 70px rgba(60,40,10,0.18);
+  box-shadow: inset 0 0 70px rgba(60,40,10,0.12);
 }
 
 /* Back of parchment — same image, slightly offset + dimmed for reverse-side look */
@@ -160,7 +162,7 @@
   font-family: 'Cinzel', serif;
   font-size: 1.65rem;
   font-weight: 700;
-  color: #1e0d02;
+  color: #050200;
   text-align: center;
   letter-spacing: 0.1em;
   line-height: 1.15;
@@ -170,7 +172,7 @@
   font-family: 'IM Fell English', serif;
   font-style: italic;
   font-size: 0.88rem;
-  color: #4e2206;
+  color: #2a0e00;
   text-align: center;
   margin-top: 4px;
   margin-bottom: 22px;
@@ -180,7 +182,7 @@
   font-family: 'Cinzel', serif;
   font-size: 0.68rem;
   font-weight: 600;
-  color: rgba(30,14,2,0.52);
+  color: rgba(8,3,0,0.72);
   letter-spacing: 0.12em;
   text-transform: uppercase;
   position: relative;
@@ -188,7 +190,7 @@
 .hp-divider {
   border: none;
   height: 1px;
-  background: linear-gradient(to right, transparent, rgba(60,32,4,0.32), transparent);
+  background: linear-gradient(to right, transparent, rgba(30,10,0,0.45), transparent);
   margin: 16px 0;
   position: relative;
 }
@@ -197,41 +199,41 @@
   width: 100%;
   background: transparent;
   border: none;
-  border-bottom: 1.5px solid rgba(60,32,4,0.45);
+  border-bottom: 1.5px solid rgba(20,6,0,0.55);
   padding: 8px 4px;
   font-family: 'Cinzel', serif;
   font-size: 1.65rem;
   font-weight: 700;
   text-align: center;
   letter-spacing: 0.35em;
-  color: #1a0802;
+  color: #050200;
   outline: none;
   box-sizing: border-box;
-  caret-color: #4e2206;
+  caret-color: #2a0e00;
   transition: border-color 0.2s;
   position: relative;
 }
-.hp-code-input::placeholder { color: rgba(60,32,4,0.25); letter-spacing: 0.15em; font-weight: 400; }
-.hp-code-input:focus { border-bottom-color: rgba(40,16,0,0.78); }
+.hp-code-input::placeholder { color: rgba(20,6,0,0.32); letter-spacing: 0.15em; font-weight: 400; }
+.hp-code-input:focus { border-bottom-color: rgba(10,2,0,0.88); }
 
 .hp-text-input {
   width: 100%;
   background: transparent;
   border: none;
-  border-bottom: 1px solid rgba(60,32,4,0.3);
+  border-bottom: 1px solid rgba(20,6,0,0.42);
   padding: 5px 2px;
   font-family: 'IM Fell English', serif;
   font-style: italic;
   font-size: 1rem;
-  color: #1a0802;
+  color: #050200;
   outline: none;
   box-sizing: border-box;
-  caret-color: #4e2206;
+  caret-color: #2a0e00;
   transition: border-color 0.2s;
   position: relative;
 }
-.hp-text-input::placeholder { color: rgba(60,32,4,0.22); font-style: italic; }
-.hp-text-input:focus { border-bottom-color: rgba(40,16,0,0.62); }
+.hp-text-input::placeholder { color: rgba(20,6,0,0.32); font-style: italic; }
+.hp-text-input:focus { border-bottom-color: rgba(10,2,0,0.75); }
 .hp-text-input:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .hp-btn-primary {
@@ -257,7 +259,7 @@
 .hp-error {
   font-family: 'IM Fell English', serif;
   font-style: italic;
-  color: #6e1010;
+  color: #5a0808;
   font-size: 0.85rem;
   text-align: center;
   margin-top: 10px;
@@ -268,7 +270,7 @@
   text-align: center;
   font-family: 'Cinzel', serif;
   font-size: 0.67rem;
-  color: rgba(30,14,2,0.3);
+  color: rgba(8,3,0,0.45);
   letter-spacing: 0.06em;
   background: none;
   border: none;
@@ -276,37 +278,37 @@
   transition: color 0.2s;
   position: relative;
 }
-.hp-ghost-link:hover { color: rgba(30,14,2,0.6); }
+.hp-ghost-link:hover { color: rgba(8,3,0,0.78); }
 
 /* === Ingredient slot === */
 .ingredient-slot {
-  background: rgba(60,32,4,0.07);
-  border: 1px solid rgba(60,32,4,0.18);
+  background: rgba(20,6,0,0.07);
+  border: 1px solid rgba(20,6,0,0.22);
   border-radius: 2px;
   padding: 12px 14px 14px;
   position: relative;
   margin-bottom: 10px;
 }
-.ingredient-slot.has-answer { background: rgba(60,32,4,0.13); border-color: rgba(60,32,4,0.3); }
+.ingredient-slot.has-answer { background: rgba(20,6,0,0.12); border-color: rgba(20,6,0,0.34); }
 
 /* === Tabs === */
-.hp-tabs { display: flex; border-bottom: 1.5px solid rgba(60,32,4,0.22); margin-bottom: 18px; position: relative; }
-.hp-tab { flex: 1; padding: 8px 0; font-family: 'Cinzel', serif; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.09em; text-align: center; background: none; border: none; cursor: pointer; transition: color 0.2s; color: rgba(30,14,2,0.32); position: relative; }
-.hp-tab.active { color: #1e0d02; border-bottom: 2px solid #5c3317; margin-bottom: -1.5px; }
+.hp-tabs { display: flex; border-bottom: 1.5px solid rgba(20,6,0,0.32); margin-bottom: 18px; position: relative; }
+.hp-tab { flex: 1; padding: 8px 0; font-family: 'Cinzel', serif; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.09em; text-align: center; background: none; border: none; cursor: pointer; transition: color 0.2s; color: rgba(8,3,0,0.42); position: relative; }
+.hp-tab.active { color: #050200; border-bottom: 2px solid #3a1000; margin-bottom: -1.5px; }
 
 /* === Timer === */
-.hp-timer { background: rgba(60,32,4,0.09); border: 1px solid rgba(60,32,4,0.2); border-radius: 2px; padding: 12px 16px; text-align: center; margin-bottom: 16px; }
-.hp-timer.warning { background: rgba(130,60,0,0.1); border-color: rgba(130,60,0,0.3); }
-.hp-timer.expired  { background: rgba(110,14,14,0.1); border-color: rgba(110,14,14,0.3); }
-.hp-timer-label { font-family: 'Cinzel', serif; font-size: 0.63rem; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(30,14,2,0.4); margin-bottom: 4px; }
-.hp-timer-label.warning { color: rgba(120,52,0,0.85); }
-.hp-timer-label.expired { color: rgba(110,18,18,0.85); }
-.hp-timer-value { font-family: 'Cinzel', serif; font-size: 2.4rem; font-weight: 700; color: #1a0802; letter-spacing: 0.04em; line-height: 1; }
-.hp-timer-value.warning { color: #5e2800; }
-.hp-timer-value.expired { color: #5e0e0e; }
+.hp-timer { background: rgba(20,6,0,0.08); border: 1px solid rgba(20,6,0,0.22); border-radius: 2px; padding: 12px 16px; text-align: center; margin-bottom: 16px; }
+.hp-timer.warning { background: rgba(130,60,0,0.12); border-color: rgba(130,60,0,0.38); }
+.hp-timer.expired  { background: rgba(110,14,14,0.12); border-color: rgba(110,14,14,0.38); }
+.hp-timer-label { font-family: 'Cinzel', serif; font-size: 0.63rem; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(8,3,0,0.55); margin-bottom: 4px; }
+.hp-timer-label.warning { color: rgba(110,42,0,0.92); }
+.hp-timer-label.expired { color: rgba(100,10,10,0.92); }
+.hp-timer-value { font-family: 'Cinzel', serif; font-size: 2.4rem; font-weight: 700; color: #050200; letter-spacing: 0.04em; line-height: 1; }
+.hp-timer-value.warning { color: #4a1e00; }
+.hp-timer-value.expired { color: #4a0808; }
 .hp-timer-warning-msg { font-family: 'IM Fell English', serif; font-style: italic; font-size: 0.82rem; margin-top: 6px; }
-.hp-timer-warning-msg.warning { color: #5e2800; }
-.hp-timer-warning-msg.expired { color: #5e0e0e; }
+.hp-timer-warning-msg.warning { color: #4a1e00; }
+.hp-timer-warning-msg.expired { color: #4a0808; }
 
 /* === Done banner === */
 .hp-done-banner { background: rgba(12,52,20,0.12); border: 1px solid rgba(12,52,20,0.28); border-radius: 2px; padding: 12px 14px; margin-bottom: 16px; }

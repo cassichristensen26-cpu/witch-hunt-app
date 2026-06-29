@@ -28,8 +28,13 @@ export default function Landing() {
         gameId: team.game_id,
         gameName: game.name,
       }))
-      setOpen(true)
-      setTimeout(() => navigate('/team'), 2200)
+      // Double RAF: lets browser paint the closed state before triggering transition
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setOpen(true)
+          setTimeout(() => navigate('/team'), 2400)
+        })
+      })
     } catch (err) {
       setError(err.message === 'Invalid join code' ? 'Invalid join code — check with your moderator' : err.message)
       setLoading(false)
@@ -38,14 +43,23 @@ export default function Landing() {
 
   return (
     <div className="hp-page">
-      <div className={`parchment-scene${open ? ' open' : ''}`}>
+      <div className="parchment-scene">
 
-        {/* Top fold area — height 0→240px, flap bottom-anchored so it reveals upward */}
-        <div className="parchment-fold-wrap top">
+        {/* Top fold panel — grows upward from fold line when open */}
+        <div
+          style={{
+            overflow: 'hidden',
+            width: '100%',
+            height: open ? 240 : 0,
+            display: 'flex',
+            alignItems: 'flex-end',
+            transition: 'height 1.5s cubic-bezier(0.22, 1.0, 0.36, 1.0)',
+          }}
+        >
           <div className="parchment-flap parchment-back" />
         </div>
 
-        {/* Center panel — always visible, contains login form */}
+        {/* Center panel — always visible, login form */}
         <div className="parchment-center parchment">
           <div className="hp-title">Witch Hunt</div>
           <div className="hp-subtitle">Enter your team's join code</div>
@@ -79,8 +93,15 @@ export default function Landing() {
           </button>
         </div>
 
-        {/* Bottom fold area — height 0→240px, reveals downward */}
-        <div className="parchment-fold-wrap bottom">
+        {/* Bottom fold panel — grows downward from fold line when open */}
+        <div
+          style={{
+            overflow: 'hidden',
+            width: '100%',
+            height: open ? 240 : 0,
+            transition: 'height 1.4s cubic-bezier(0.22, 1.0, 0.36, 1.0) 0.4s',
+          }}
+        >
           <div className="parchment-flap parchment-back" />
         </div>
 
