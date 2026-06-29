@@ -22,6 +22,7 @@ export default function ModTeam() {
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [adjForm, setAdjForm] = useState({ type: 'time_penalty', amount: '', reason: '' })
+  const [hoveringToggle, setHoveringToggle] = useState(false)
 
   useEffect(() => {
     if (!token) { navigate('/mod'); return }
@@ -107,14 +108,17 @@ export default function ModTeam() {
           <button
             onClick={handleToggleDone}
             disabled={busy}
-            className={`group text-sm font-semibold px-4 py-2 rounded-xl transition-colors disabled:opacity-40 ${
+            onMouseEnter={() => setHoveringToggle(true)}
+            onMouseLeave={() => setHoveringToggle(false)}
+            className={`text-sm font-semibold px-4 py-2 rounded-xl transition-colors disabled:opacity-40 ${
               team.end_time
                 ? 'bg-green-900 hover:bg-red-900 text-green-300 hover:text-red-300 border border-green-800 hover:border-red-800'
                 : 'bg-gray-800 hover:bg-green-800 text-gray-300 hover:text-white border border-gray-700'
             }`}
           >
-            <span className="group-hover:hidden">{team.end_time ? 'Done ✓' : 'Still Playing'}</span>
-            <span className="hidden group-hover:inline">{team.end_time ? 'Undo Done ✗' : 'Mark Done ✓'}</span>
+            {hoveringToggle
+              ? (team.end_time ? 'Undo Done ✗' : 'Mark Done ✓')
+              : (team.end_time ? 'Done ✓' : 'Still Playing')}
           </button>
         </div>
 
