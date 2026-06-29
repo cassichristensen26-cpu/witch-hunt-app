@@ -48,7 +48,7 @@ export default function Landing() {
               value={code}
               onChange={e => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
               placeholder="· · · · · ·"
-              maxLength={8}
+              maxLength={6}
               autoCapitalize="characters"
               autoCorrect="off"
               autoComplete="off"
@@ -58,7 +58,7 @@ export default function Landing() {
             <button
               className="hp-btn-primary"
               type="submit"
-              disabled={loading || code.length < 4}
+              disabled={loading || code.length < 6}
             >
               {loading ? 'Joining…' : 'Enter the Hunt'}
             </button>

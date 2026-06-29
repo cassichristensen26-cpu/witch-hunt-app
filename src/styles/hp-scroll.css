@@ -112,9 +112,9 @@
 }
 .hp-label {
   font-family: 'Cinzel', serif;
-  font-size: 0.68rem;
+  font-size: 0.74rem;
   font-weight: 600;
-  color: rgba(8,3,0,0.72);
+  color: rgba(8,3,0,0.78);
   letter-spacing: 0.12em;
   text-transform: uppercase;
   position: relative;
@@ -164,7 +164,7 @@
   transition: border-color 0.2s;
   position: relative;
 }
-.hp-text-input::placeholder { color: rgba(20,6,0,0.32); font-style: italic; }
+.hp-text-input::placeholder { color: rgba(8,3,0,0.52); font-style: italic; }
 .hp-text-input:focus { border-bottom-color: rgba(10,2,0,0.75); }
 .hp-text-input:disabled { opacity: 0.45; cursor: not-allowed; }
 
@@ -263,11 +263,11 @@
 /* === Hint box === */
 .hp-hint-box { margin-top: 10px; background: rgba(36,12,80,0.09); border: 1px solid rgba(36,12,80,0.2); border-radius: 2px; padding: 10px 12px; }
 .hp-hint-label { font-family: 'Cinzel', serif; font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(36,12,80,0.55); margin-bottom: 5px; }
-.hp-hint-text { font-family: 'IM Fell English', serif; font-style: italic; font-size: 0.95rem; color: #14064e; }
-.hp-hint-sub { font-family: 'IM Fell English', serif; font-style: italic; font-size: 0.78rem; color: rgba(20,6,78,0.5); margin-top: 6px; }
-.hp-hint-link { font-family: 'IM Fell English', serif; font-style: italic; font-size: 0.85rem; color: rgba(36,12,80,0.5); background: none; border: none; cursor: pointer; padding: 0; transition: color 0.2s; margin-top: 8px; display: inline-block; }
-.hp-hint-link:hover { color: rgba(36,12,80,0.8); }
-.hp-hint-limit { font-family: 'IM Fell English', serif; font-style: italic; font-size: 0.82rem; color: rgba(30,14,2,0.3); margin-top: 8px; display: inline-block; }
+.hp-hint-text { font-family: 'IM Fell English', serif; font-style: italic; font-size: 1.05rem; color: #0c0438; }
+.hp-hint-sub { font-family: 'IM Fell English', serif; font-style: italic; font-size: 0.88rem; color: rgba(12,4,56,0.65); margin-top: 6px; }
+.hp-hint-link { font-family: 'IM Fell English', serif; font-style: italic; font-size: 1rem; color: rgba(28,8,70,0.72); background: none; border: none; cursor: pointer; padding: 0; transition: color 0.2s; margin-top: 8px; display: inline-block; }
+.hp-hint-link:hover { color: rgba(28,8,70,0.95); }
+.hp-hint-limit { font-family: 'IM Fell English', serif; font-style: italic; font-size: 0.9rem; color: rgba(8,3,0,0.45); margin-top: 8px; display: inline-block; }
 
 /* === Adjustments === */
 .hp-adj { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-radius: 2px; border: 1px solid; margin-bottom: 6px; }

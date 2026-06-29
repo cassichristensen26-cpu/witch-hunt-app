@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { upsertAnswer, ensureAnonSession, requestHint } from '../lib/api'
+import { upsertAnswer, ensureAnonSession, requestHint, joinTeam } from '../lib/api'
 import { formatCountdown } from '../lib/scoring'
 import '../styles/hp-scroll.css'
 
@@ -20,6 +20,7 @@ export default function Team() {
   const [correctCount, setCorrectCount] = useState(0)
   const [game, setGame] = useState(null)
   const [timeLeftMs, setTimeLeftMs] = useState(null)
+  const [ceremonyMs, setCeremonyMs] = useState(null)
 
   const [hintRequests, setHintRequests] = useState([])
   const [revealedHints, setRevealedHints] = useState({})
@@ -48,7 +49,23 @@ export default function Team() {
   useEffect(() => {
     if (!teamData) { navigate('/'); return }
     let cleanup = () => {}
-    ensureAnonSession().then(() => { cleanup = setupData() })
+    async function init() {
+      await ensureAnonSession()
+      // If the anon session was renewed (e.g. token expired), the new user_id
+      // won't have a team_sessions row. Re-join using the stored code to restore it.
+      const { data: ts } = await supabase.from('team_sessions').select('team_id').maybeSingle()
+      if (!ts) {
+        try {
+          await joinTeam(teamData.joinCode)
+        } catch {
+          localStorage.removeItem('wh_team')
+          navigate('/')
+          return
+        }
+      }
+      cleanup = setupData()
+    }
+    init()
     supabase.from('rules').select('content').eq('id', 1).single()
       .then(({ data }) => { if (data) setRules(data.content) })
     return () => cleanup()
@@ -70,7 +87,12 @@ export default function Team() {
   useEffect(() => {
     if (!game?.start_time || !game?.duration_minutes) return
     const endTime = new Date(game.start_time).getTime() + game.duration_minutes * 60000
-    const tick = () => setTimeLeftMs(endTime - Date.now())
+    const ceremonyTime = endTime + 10 * 60000
+    const tick = () => {
+      const now = Date.now()
+      setTimeLeftMs(endTime - now)
+      setCeremonyMs(Math.max(0, ceremonyTime - now))
+    }
     tick()
     const interval = setInterval(tick, 1000)
     return () => clearInterval(interval)
@@ -193,8 +215,15 @@ export default function Team() {
 
   const timeElapsedFraction = (timeLeftMs !== null && totalMs)
     ? Math.max(0, 1 - timeLeftMs / totalMs) : 0
-  const showPacket2 = !!(game?.packet2_message && (correctCount >= 3 || timeElapsedFraction >= 1 / 3))
-  const showPacket3 = !!(game?.packet3_message && (correctCount >= 6 || timeElapsedFraction >= 2 / 3))
+  const showPacket2 = !done && !!(game?.packet2_message && (correctCount >= 3 || timeElapsedFraction >= 1 / 3))
+  const showPacket3 = !done && !!(game?.packet3_message && (correctCount >= 6 || timeElapsedFraction >= 2 / 3))
+
+  const ceremonyDate = game?.start_time && game?.duration_minutes
+    ? new Date(new Date(game.start_time).getTime() + (game.duration_minutes + 10) * 60000)
+    : null
+  const ceremonyTimeDisplay = ceremonyDate
+    ? ceremonyDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+    : null
 
   return (
     <div className="hp-page-scroll">
@@ -224,8 +253,8 @@ export default function Team() {
             </button>
           </div>
 
-          {/* Countdown */}
-          {timeLeftMs !== null && totalMs && (
+          {/* Countdown — hidden once team is marked done */}
+          {!done && timeLeftMs !== null && totalMs && (
             <div className={`hp-timer ${timerClass}`}>
               <div className={`hp-timer-label ${timerClass}`}>{isExpired ? "Time's Up" : 'Time Remaining'}</div>
               <div className={`hp-timer-value ${timerClass}`}>{isExpired ? '0:00' : formatCountdown(timeLeftMs)}</div>
@@ -238,8 +267,8 @@ export default function Team() {
           {activeTab === 'rules' && (
             <div>
               {rules
-                ? <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '0.95rem', color: '#1a0a03', lineHeight: 1.7, whiteSpace: 'pre-wrap', position: 'relative' }}>{rules}</p>
-                : <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', color: 'rgba(35,16,5,0.32)', fontSize: '0.9rem', position: 'relative' }}>No rules have been posted yet.</p>
+                ? <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '1.05rem', color: '#050200', lineHeight: 1.75, whiteSpace: 'pre-wrap', position: 'relative' }}>{rules}</p>
+                : <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', color: 'rgba(8,3,0,0.48)', fontSize: '1rem', position: 'relative' }}>No rules have been posted yet.</p>
               }
             </div>
           )}
@@ -269,17 +298,32 @@ export default function Team() {
               {/* Fold crease — under packet pickup section */}
               <div className="parchment-crease" style={{ margin: '12px -30px 16px' }} />
 
-              {/* Done banner */}
+              {/* Done banner — replaces timer and packet info */}
               {done && (
                 <div className="hp-done-banner">
-                  <div className="hp-done-title">✦ Your team has been marked as finished</div>
-                  <div className="hp-done-sub">Scores are being tallied. Your answers are now sealed.</div>
+                  <div className="hp-done-title">✦ Hunt Complete — Your Answers Are Sealed</div>
+                  <div className="hp-done-sub" style={{ marginTop: 6 }}>
+                    Scores are being tallied.
+                    {ceremonyTimeDisplay && (
+                      <> The award ceremony will begin at <strong style={{ fontStyle: 'normal', color: '#0c3414' }}>{ceremonyTimeDisplay}</strong>.</>
+                    )}
+                  </div>
+                  {ceremonyMs !== null && (
+                    <div className={`hp-timer${ceremonyMs === 0 ? ' warning' : ''}`} style={{ marginTop: 14, marginBottom: 0 }}>
+                      <div className={`hp-timer-label${ceremonyMs === 0 ? ' warning' : ''}`}>
+                        {ceremonyMs > 0 ? 'Award Ceremony In' : 'Award Ceremony'}
+                      </div>
+                      <div className={`hp-timer-value${ceremonyMs === 0 ? ' warning' : ''}`} style={{ fontSize: '2rem' }}>
+                        {ceremonyMs > 0 ? formatCountdown(ceremonyMs) : 'Starting Now!'}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
               {/* Hint usage */}
               {totalHints > 0 && (
-                <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '0.78rem', color: 'rgba(35,16,5,0.38)', textAlign: 'right', marginBottom: 12, position: 'relative' }}>
+                <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '0.88rem', color: 'rgba(8,3,0,0.55)', textAlign: 'right', marginBottom: 12, position: 'relative' }}>
                   {totalHints}/3 hints used{totalHints === 3 && ' · no more available'}
                 </div>
               )}
@@ -298,13 +342,13 @@ export default function Team() {
                     <div className={`ingredient-slot${hasAnswer ? ' has-answer' : ''}`}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
                         <span className="hp-label">{kw?.display_label || `Ingredient ${slot}`}</span>
-                        <span style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '0.73rem' }}>
+                        <span style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '0.82rem' }}>
                           {saveErrors[slot]
-                            ? <span style={{ color: '#7a1414' }}>{saveErrors[slot]}</span>
+                            ? <span style={{ color: '#5a0808' }}>{saveErrors[slot]}</span>
                             : saving[slot]
-                              ? <span style={{ color: 'rgba(35,16,5,0.3)' }}>saving…</span>
+                              ? <span style={{ color: 'rgba(10,4,0,0.48)' }}>saving…</span>
                               : hasAnswer
-                                ? <span style={{ color: 'rgba(35,16,5,0.28)' }}>saved</span>
+                                ? <span style={{ color: 'rgba(10,4,0,0.45)' }}>saved</span>
                                 : null}
                         </span>
                       </div>
@@ -329,7 +373,8 @@ export default function Team() {
                             ) : (
                               <span className="hp-hint-limit">Loading hint…</span>
                             )
-                          ) : totalHints >= 3 ? (
+                          ) : done ? null
+                          : totalHints >= 3 ? (
                             <span className="hp-hint-limit">Hint limit reached</span>
                           ) : (
                             <button className="hp-hint-link" onClick={() => setConfirmHint({ slot, nextNumber: totalHints + 1 })}>
