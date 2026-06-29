@@ -38,10 +38,7 @@ export default function Landing() {
   }
 
   return (
-    <div
-      className="hp-page"
-      style={{ perspective: '800px', perspectiveOrigin: 'center center' }}
-    >
+    <div className="hp-page">
       <div className={`parchment-scene${open ? ' open' : ''}`}>
 
         {/* Top flap — starts at 165° (visible, folded over center), unfolds upward */}
