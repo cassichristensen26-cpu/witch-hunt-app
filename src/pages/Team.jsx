@@ -298,7 +298,19 @@ export default function Team() {
               {/* Fold crease — under packet pickup section */}
               <div className="parchment-crease" style={{ margin: '12px -30px 16px' }} />
 
-              {/* Done banner — replaces timer and packet info */}
+              {/* Award ceremony countdown — shown above the sealed banner */}
+              {done && ceremonyMs !== null && (
+                <div className={`hp-timer${ceremonyMs === 0 ? ' warning' : ''}`} style={{ marginBottom: 12 }}>
+                  <div className={`hp-timer-label${ceremonyMs === 0 ? ' warning' : ''}`}>
+                    {ceremonyMs > 0 ? 'Award Ceremony In' : 'Award Ceremony'}
+                  </div>
+                  <div className={`hp-timer-value${ceremonyMs === 0 ? ' warning' : ''}`} style={{ fontSize: '2rem' }}>
+                    {ceremonyMs > 0 ? formatCountdown(ceremonyMs) : 'Starting Now!'}
+                  </div>
+                </div>
+              )}
+
+              {/* Done banner */}
               {done && (
                 <div className="hp-done-banner">
                   <div className="hp-done-title">✦ Hunt Complete — Your Answers Are Sealed</div>
@@ -308,16 +320,6 @@ export default function Team() {
                       <> The award ceremony will begin at <strong style={{ fontStyle: 'normal', color: '#0c3414' }}>{ceremonyTimeDisplay}</strong>.</>
                     )}
                   </div>
-                  {ceremonyMs !== null && (
-                    <div className={`hp-timer${ceremonyMs === 0 ? ' warning' : ''}`} style={{ marginTop: 14, marginBottom: 0 }}>
-                      <div className={`hp-timer-label${ceremonyMs === 0 ? ' warning' : ''}`}>
-                        {ceremonyMs > 0 ? 'Award Ceremony In' : 'Award Ceremony'}
-                      </div>
-                      <div className={`hp-timer-value${ceremonyMs === 0 ? ' warning' : ''}`} style={{ fontSize: '2rem' }}>
-                        {ceremonyMs > 0 ? formatCountdown(ceremonyMs) : 'Starting Now!'}
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
 
