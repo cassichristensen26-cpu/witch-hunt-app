@@ -214,9 +214,6 @@ export default function Team() {
             </div>
           </div>
 
-          {/* First fold crease — visible mark where the paper was folded */}
-          <div className="parchment-crease" style={{ margin: '20px -30px' }} />
-
           {/* Tabs */}
           <div className="hp-tabs">
             <button className={`hp-tab${activeTab === 'ingredients' ? ' active' : ''}`} onClick={() => setActiveTab('ingredients')}>
@@ -269,6 +266,9 @@ export default function Team() {
                 </div>
               )}
 
+              {/* Fold crease — under packet pickup section */}
+              <div className="parchment-crease" style={{ margin: '12px -30px 16px' }} />
+
               {/* Done banner */}
               {done && (
                 <div className="hp-done-banner">
@@ -284,9 +284,6 @@ export default function Team() {
                 </div>
               )}
 
-              {/* Second fold crease — midway through content */}
-              <div className="parchment-crease" style={{ margin: '4px -30px 14px' }} />
-
               {/* Ingredient slots */}
               <div>
                 {SLOTS.map(slot => {
@@ -297,7 +294,8 @@ export default function Team() {
                   const hintAlreadyUsed = !!slotHintReq
 
                   return (
-                    <div key={slot} className={`ingredient-slot${hasAnswer ? ' has-answer' : ''}`}>
+                    <div key={slot}>
+                    <div className={`ingredient-slot${hasAnswer ? ' has-answer' : ''}`}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
                         <span className="hp-label">{kw?.display_label || `Ingredient ${slot}`}</span>
                         <span style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '0.73rem' }}>
@@ -340,6 +338,8 @@ export default function Team() {
                           )}
                         </div>
                       )}
+                    </div>
+                    {slot === 5 && <div className="parchment-crease" style={{ margin: '10px -30px 14px' }} />}
                     </div>
                   )
                 })}

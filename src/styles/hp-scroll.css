@@ -7,34 +7,20 @@
    ───────────────────────────────────────────── */
 
 .parchment {
-  background-color: #ede8d4;
-  background-image:
-    /* SVG fractal noise — light mottling like the reference image */
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.28' numOctaves='5' seed='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0.95 0 0 0 0 0.90 0 0 0 0 0.78 0 0 0 0.30 0'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23n)'/%3E%3C/svg%3E"),
-    /* Organic blotches — bright highlights and subtle warm shadows, very light overall */
-    radial-gradient(ellipse 110% 60% at -8% 8%,  rgba(255,255,248,0.65) 0%, transparent 68%),
-    radial-gradient(ellipse 70%  80% at 105% 95%, rgba(178,165,130,0.38) 0%, transparent 65%),
-    radial-gradient(ellipse 55%  45% at 52%  40%, rgba(255,253,242,0.50) 0%, transparent 60%),
-    radial-gradient(ellipse 80%  45% at 15%  92%, rgba(182,170,138,0.35) 0%, transparent 60%),
-    radial-gradient(ellipse 48%  60% at 88%  18%, rgba(200,192,165,0.35) 0%, transparent 58%),
-    radial-gradient(ellipse 65%  35% at 40%  78%, rgba(188,178,148,0.28) 0%, transparent 55%),
-    /* Base — very light warm cream */
-    linear-gradient(148deg, #d8d0b8 0%, #e8e0c8 18%, #f2ece0 42%, #eee6d2 65%, #e2dacc 88%, #d8d0b8 100%);
-  background-size: 400px 400px, auto, auto, auto, auto, auto, auto, auto;
-  box-shadow: inset 0 0 80px rgba(80,60,20,0.12), inset 0 0 24px rgba(60,42,10,0.08);
+  background-color: #e8dfc4;
+  background-image: url('/parchment-texture.jpg');
+  background-size: cover;
+  background-position: center center;
+  box-shadow: inset 0 0 70px rgba(60,40,10,0.18);
 }
 
-/* Back of parchment — slightly more aged/warm, for the fold flap reverse side */
+/* Back of parchment — same image, slightly offset + dimmed for reverse-side look */
 .parchment-back {
-  background-color: #e2d8c0;
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.28' numOctaves='5' seed='9' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0.90 0 0 0 0 0.84 0 0 0 0 0.70 0 0 0 0.32 0'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23n)'/%3E%3C/svg%3E"),
-    radial-gradient(ellipse 90%  55% at 10% 20%, rgba(248,242,224,0.55) 0%, transparent 65%),
-    radial-gradient(ellipse 65%  70% at 90% 85%, rgba(165,152,112,0.35) 0%, transparent 60%),
-    radial-gradient(ellipse 55%  45% at 48% 48%, rgba(240,232,208,0.42) 0%, transparent 58%),
-    linear-gradient(145deg, #ccc2a8 0%, #d8d0b8 22%, #e4dcc8 48%, #d8d0b8 72%, #ccc2a8 100%);
-  background-size: 400px 400px, auto, auto, auto, auto;
-  box-shadow: inset 0 0 80px rgba(80,60,20,0.15), inset 0 0 24px rgba(60,42,10,0.10);
+  background-color: #ddd3b0;
+  background-image: url('/parchment-texture.jpg');
+  background-size: cover;
+  background-position: center 65%;
+  filter: brightness(0.91) sepia(0.08);
 }
 
 /* Fold crease line */
@@ -88,18 +74,13 @@
   width: 100%;
   max-width: 380px;
   margin: 0 auto;
+  box-shadow: 0 12px 48px rgba(0,0,0,0.85), 4px 0 20px rgba(0,0,0,0.4), -4px 0 20px rgba(0,0,0,0.4);
 }
 
 /* Center panel — always visible, login form */
 .parchment-center {
   position: relative;
-  z-index: 2;
   padding: 40px 32px 32px;
-  box-shadow:
-    0 -4px 28px rgba(0,0,0,0.55),
-    0  4px 28px rgba(0,0,0,0.55),
-    4px 0 18px rgba(0,0,0,0.32),
-    -4px 0 18px rgba(0,0,0,0.32);
 }
 
 /* Fold crease lines at top and bottom of center panel */
@@ -110,7 +91,6 @@
   left: 0; right: 0;
   height: 6px;
   pointer-events: none;
-  z-index: 3;
 }
 .parchment-center::before {
   top: 0;
@@ -131,37 +111,30 @@
   );
 }
 
-/* Fold flaps
-   Start at scaleY(0) — invisible thin line at the fold edge.
-   On .open: scale up to full height, growing away from fold line.
-   Uses 2D scaling (no 3D) to avoid CSS stacking context conflicts.
+/* Fold flap wrappers — in normal flow, height 0→240px reveals the panel
+   Top: flex-end so flap anchors to the bottom (fold line), reveals upward
+   Bottom: default so flap anchors to top (fold line), reveals downward
 */
-.parchment-flap {
-  position: absolute;
-  left: 0; right: 0;
-  height: 240px;
-  z-index: 1;
+.parchment-fold-wrap {
   overflow: hidden;
+  width: 100%;
+  height: 0;
 }
+.parchment-fold-wrap.top {
+  display: flex;
+  align-items: flex-end;
+  transition: height 1.4s cubic-bezier(0.22, 1.0, 0.36, 1.0) 0s;
+}
+.parchment-fold-wrap.bottom {
+  transition: height 1.3s cubic-bezier(0.22, 1.0, 0.36, 1.0) 0.35s;
+}
+.parchment-scene.open .parchment-fold-wrap { height: 240px; }
 
-.parchment-flap.top {
-  bottom: 100%;
-  transform-origin: bottom center;
-  transform: scaleY(0);
-  transition: transform 1.4s cubic-bezier(0.22, 1.0, 0.36, 1.0) 0s;
-  box-shadow: 0 -6px 20px rgba(0,0,0,0.45);
+.parchment-flap {
+  width: 100%;
+  height: 240px;
+  flex-shrink: 0;
 }
-.parchment-flap.bottom {
-  top: 100%;
-  transform-origin: top center;
-  transform: scaleY(0);
-  transition: transform 1.3s cubic-bezier(0.22, 1.0, 0.36, 1.0) 0.35s;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.45);
-}
-
-/* Open state — flaps unfold to full height */
-.parchment-scene.open .parchment-flap.top    { transform: scaleY(1); }
-.parchment-scene.open .parchment-flap.bottom { transform: scaleY(1); }
 
 /* ─────────────────────────────────────────────
    FLAT PARCHMENT — Team page (fully unfolded)

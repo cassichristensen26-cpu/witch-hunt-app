@@ -29,8 +29,7 @@ export default function Landing() {
         gameName: game.name,
       }))
       setOpen(true)
-      // Give the animation time to play before navigating
-      setTimeout(() => navigate('/team'), 2000)
+      setTimeout(() => navigate('/team'), 2200)
     } catch (err) {
       setError(err.message === 'Invalid join code' ? 'Invalid join code — check with your moderator' : err.message)
       setLoading(false)
@@ -41,10 +40,12 @@ export default function Landing() {
     <div className="hp-page">
       <div className={`parchment-scene${open ? ' open' : ''}`}>
 
-        {/* Top flap — starts at 165° (visible, folded over center), unfolds upward */}
-        <div className="parchment-flap top parchment parchment-back" />
+        {/* Top fold area — height 0→240px, flap bottom-anchored so it reveals upward */}
+        <div className="parchment-fold-wrap top">
+          <div className="parchment-flap parchment-back" />
+        </div>
 
-        {/* Center panel — always visible, login form */}
+        {/* Center panel — always visible, contains login form */}
         <div className="parchment-center parchment">
           <div className="hp-title">Witch Hunt</div>
           <div className="hp-subtitle">Enter your team's join code</div>
@@ -78,8 +79,10 @@ export default function Landing() {
           </button>
         </div>
 
-        {/* Bottom flap — starts at -165° (visible, folded over center), unfolds downward */}
-        <div className="parchment-flap bottom parchment parchment-back" />
+        {/* Bottom fold area — height 0→240px, reveals downward */}
+        <div className="parchment-fold-wrap bottom">
+          <div className="parchment-flap parchment-back" />
+        </div>
 
       </div>
     </div>
