@@ -141,7 +141,14 @@ export default function ModTeam() {
                   <div className="flex items-center gap-3">
                     <span className="text-gray-700 text-xs font-mono w-4 shrink-0">{slot}</span>
                     <div className="flex-1 min-w-0">
-                      {kw && <p className="text-xs text-gray-600 leading-tight">{kw.display_label}</p>}
+                      {kw && (
+                        <p className="text-xs leading-tight">
+                          <span className="text-gray-600">{kw.display_label}</span>
+                          {kw.correct_answer && (
+                            <span className="text-gray-500 ml-1">— {kw.correct_answer}</span>
+                          )}
+                        </p>
+                      )}
                       <p className={`text-sm truncate ${
                         ans?.submitted_answer
                           ? flagged ? 'text-amber-200 font-medium' : correct ? 'text-green-200' : 'text-white'
