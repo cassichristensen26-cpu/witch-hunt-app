@@ -325,27 +325,14 @@ export default function Team() {
                 </div>
               )}
 
-              {/* Done banner */}
-              {done && !disqualified && (
+              {/* Sealed banner (done or DQ'd) */}
+              {sealed && (
                 <div className="hp-done-banner">
                   <div className="hp-done-title">✦ Hunt Complete — Your Answers Are Sealed</div>
                   <div className="hp-done-sub" style={{ marginTop: 6 }}>
                     Scores are being tallied.
                     {ceremonyTimeDisplay && (
                       <> The award ceremony will begin at <strong style={{ fontStyle: 'normal', color: '#0c3414' }}>{ceremonyTimeDisplay}</strong>.</>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Disqualified banner */}
-              {disqualified && (
-                <div className="hp-dq-banner">
-                  <div className="hp-dq-title">✦ Team Disqualified — Your Answers Are Sealed</div>
-                  <div className="hp-dq-sub" style={{ marginTop: 6 }}>
-                    Your team returned after time was called.
-                    {ceremonyTimeDisplay && (
-                      <> The award ceremony will begin at <strong style={{ fontStyle: 'normal', color: '#5a1010' }}>{ceremonyTimeDisplay}</strong>.</>
                     )}
                   </div>
                 </div>

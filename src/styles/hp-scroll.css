@@ -247,11 +247,6 @@
 .hp-done-title { font-family: 'Cinzel', serif; font-size: 0.8rem; color: #0c3414; margin-bottom: 3px; }
 .hp-done-sub { font-family: 'IM Fell English', serif; font-style: italic; font-size: 0.82rem; color: rgba(12,52,20,0.7); }
 
-/* === Disqualified banner === */
-.hp-dq-banner { background: rgba(80,10,10,0.10); border: 1px solid rgba(80,10,10,0.28); border-radius: 2px; padding: 12px 14px; margin-bottom: 16px; }
-.hp-dq-title { font-family: 'Cinzel', serif; font-size: 0.8rem; color: #5a1010; margin-bottom: 3px; }
-.hp-dq-sub { font-family: 'IM Fell English', serif; font-style: italic; font-size: 0.82rem; color: rgba(80,10,10,0.7); }
-
 /* === Packet banners === */
 .hp-packet { border-radius: 2px; overflow: hidden; margin-bottom: 10px; border: 1px solid; }
 .hp-packet.p2 { background: rgba(0,45,95,0.08); border-color: rgba(0,45,95,0.2); }
