@@ -126,7 +126,10 @@ export default function Team() {
     supabase.from('games')
       .select('id, name, status, start_time, duration_minutes')
       .eq('id', gameId).single()
-      .then(({ data }) => { if (data) setGame(data) })
+      .then(({ data, error }) => {
+        if (error) console.error('Game load error:', error)
+        if (data) setGame(data)
+      })
 
     supabase.from('keywords')
       .select('slot_number, display_label, has_hint')
