@@ -82,10 +82,28 @@ export async function upsertAnswer(teamId, slot, answer) {
   const { error } = await supabase
     .from('team_answers')
     .upsert(
-      { team_id: teamId, keyword_slot: slot, submitted_answer: answer, updated_at: new Date().toISOString() },
+      { team_id: teamId, keyword_slot: slot, submitted_answer: answer },
       { onConflict: 'team_id,keyword_slot' }
     )
   if (error) throw error
+}
+
+export async function getPackets(teamId) {
+  await ensureAnonSession()
+  const { data: { session } } = await supabase.auth.getSession()
+  const headers = {
+    'Content-Type': 'application/json',
+    'apikey': ANON_KEY,
+    'Authorization': `Bearer ${session.access_token}`,
+  }
+  const res = await fetch(`${EDGE_BASE}/get-packets`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ team_id: teamId }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Request failed')
+  return data
 }
 
 export const modLogin = (password) => edge('moderator-auth', { password })
