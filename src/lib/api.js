@@ -79,13 +79,22 @@ export async function requestHint(teamId, slot) {
 }
 
 export async function upsertAnswer(teamId, slot, answer) {
-  const { error } = await supabase
-    .from('team_answers')
-    .upsert(
-      { team_id: teamId, keyword_slot: slot, submitted_answer: answer },
-      { onConflict: 'team_id,keyword_slot' }
-    )
-  if (error) throw error
+  // INSERT first; if the row already exists (unique conflict), UPDATE only submitted_answer.
+  // Split avoids needing UPDATE privilege on team_id/keyword_slot (PostgREST upsert
+  // includes all columns in ON CONFLICT DO UPDATE SET, but anon can only UPDATE submitted_answer).
+  const { error: insertError } = await supabase.from('team_answers')
+    .insert({ team_id: teamId, keyword_slot: slot, submitted_answer: answer })
+  if (insertError) {
+    if (insertError.code === '23505') {
+      const { error: updateError } = await supabase.from('team_answers')
+        .update({ submitted_answer: answer })
+        .eq('team_id', teamId)
+        .eq('keyword_slot', slot)
+      if (updateError) throw updateError
+    } else {
+      throw insertError
+    }
+  }
 }
 
 export async function getPackets(teamId) {

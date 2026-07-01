@@ -43,8 +43,11 @@ Deno.serve(async (req) => {
     .eq('id', team.game_id).single()
   if (!game) return err('Game not found', 404)
 
-  const { data: correctCount } = await service
-    .rpc('get_team_correct_count', { p_team_id: team_id })
+  const { count: correctCount } = await service
+    .from('team_answers')
+    .select('*', { count: 'exact', head: true })
+    .eq('team_id', team_id)
+    .eq('is_correct', true)
 
   const count = correctCount ?? 0
   const now = Date.now()
