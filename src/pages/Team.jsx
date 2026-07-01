@@ -215,8 +215,8 @@ export default function Team() {
 
   const timeElapsedFraction = (timeLeftMs !== null && totalMs)
     ? Math.max(0, 1 - timeLeftMs / totalMs) : 0
-  const showPacket2 = !done && !!(game?.packet2_message && (correctCount >= 3 || timeElapsedFraction >= 1 / 3))
-  const showPacket3 = !done && !!(game?.packet3_message && (correctCount >= 6 || timeElapsedFraction >= 2 / 3))
+  const showPacket2 = !done && !isExpired && !!(game?.packet2_message && (correctCount >= 3 || timeElapsedFraction >= 1 / 3))
+  const showPacket3 = !done && !isExpired && !!(game?.packet3_message && (correctCount >= 6 || timeElapsedFraction >= 2 / 3))
 
   const ceremonyDate = game?.start_time && game?.duration_minutes
     ? new Date(new Date(game.start_time).getTime() + (game.duration_minutes + 10) * 60000)
@@ -260,6 +260,18 @@ export default function Team() {
               <div className={`hp-timer-value ${timerClass}`}>{isExpired ? '0:00' : formatCountdown(timeLeftMs)}</div>
               {isWarning && !isExpired && <div className="hp-timer-warning-msg warning">Head back now — late returns cost ingredients.</div>}
               {isExpired && <div className="hp-timer-warning-msg expired">Return immediately to avoid penalties!</div>}
+            </div>
+          )}
+
+          {/* Award ceremony countdown — shown below expired timer for teams not yet marked done */}
+          {!done && isExpired && ceremonyMs !== null && (
+            <div className={`hp-timer${ceremonyMs === 0 ? ' warning' : ''}`} style={{ marginTop: 12 }}>
+              <div className={`hp-timer-label${ceremonyMs === 0 ? ' warning' : ''}`}>
+                {ceremonyMs > 0 ? 'Award Ceremony In' : 'Award Ceremony'}
+              </div>
+              <div className={`hp-timer-value${ceremonyMs === 0 ? ' warning' : ''}`} style={{ fontSize: '2rem' }}>
+                {ceremonyMs > 0 ? formatCountdown(ceremonyMs) : 'Starting Now!'}
+              </div>
             </div>
           )}
 
