@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { upsertAnswer, ensureAnonSession, requestHint, joinTeam, getPackets } from '../lib/api'
+import { upsertAnswer, ensureAnonSession, requestHint, joinTeam } from '../lib/api'
 import { formatCountdown } from '../lib/scoring'
 import '../styles/hp-scroll.css'
 
@@ -23,8 +23,6 @@ export default function Team() {
   const [timeLeftMs, setTimeLeftMs] = useState(null)
   const [ceremonyMs, setCeremonyMs] = useState(null)
 
-  const [earnedPackets, setEarnedPackets] = useState({})
-
   const [hintRequests, setHintRequests] = useState([])
   const [revealedHints, setRevealedHints] = useState({})
   const [confirmHint, setConfirmHint] = useState(null)
@@ -42,16 +40,6 @@ export default function Team() {
 
   const debounceRef = useRef({})
   const fetchedHintSlotsRef = useRef(new Set())
-
-  async function fetchPackets() {
-    if (!teamData?.teamId) return
-    try {
-      const packets = await getPackets(teamData.teamId)
-      setEarnedPackets(packets)
-    } catch {
-      // silently fail — packets just won't show until next successful fetch
-    }
-  }
 
   const refreshCorrectCount = () => {
     if (!teamData?.teamId) return
@@ -77,20 +65,11 @@ export default function Team() {
         }
       }
       cleanup = setupData()
-      fetchPackets()
     }
     init()
     supabase.from('rules').select('content').eq('id', 1).single()
       .then(({ data }) => { if (data) setRules(data.content) })
     return () => cleanup()
-  }, [])
-
-  // Re-check earned packets when correct count changes or every 90s for time-based unlocks
-  useEffect(() => { fetchPackets() }, [correctCount])
-  useEffect(() => {
-    if (!teamData?.teamId) return
-    const interval = setInterval(fetchPackets, 90000)
-    return () => clearInterval(interval)
   }, [])
 
   useEffect(() => {
@@ -124,12 +103,9 @@ export default function Team() {
     const { teamId, gameId } = teamData
 
     supabase.from('games')
-      .select('id, name, status, start_time, duration_minutes')
+      .select('id, name, status, start_time, duration_minutes, packet2_message, packet3_message')
       .eq('id', gameId).single()
-      .then(({ data, error }) => {
-        if (error) console.error('Game load error:', error)
-        if (data) setGame(data)
-      })
+      .then(({ data }) => { if (data) setGame(data) })
 
     supabase.from('keywords')
       .select('slot_number, display_label, has_hint')
@@ -160,34 +136,28 @@ export default function Team() {
       .eq('team_id', teamId)
       .then(({ data }) => setHintRequests(data || []))
 
-    // Poll correct count and game state instead of Realtime on those tables —
-    // Supabase Realtime delivers full WAL rows which would expose is_correct and
-    // packet messages to anyone watching WebSocket traffic in DevTools.
-    const correctCountPoll = setInterval(refreshCorrectCount, 10000)
-    const gamePoll = setInterval(() => {
-      supabase.from('games')
-        .select('id, name, status, start_time, duration_minutes')
-        .eq('id', gameId).single()
-        .then(({ data }) => { if (data) setGame(data) })
-    }, 15000)
-
     const channel = supabase
       .channel(`team-${teamId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'team_answers', filter: `team_id=eq.${teamId}` },
+        ({ new: row }) => {
+          if (row && !debounceRef.current[row.keyword_slot]) {
+            setAnswers(prev => ({ ...prev, [row.keyword_slot]: row }))
+          }
+          refreshCorrectCount()
+        })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'adjustments', filter: `team_id=eq.${teamId}` },
         () => supabase.from('adjustments').select('*').eq('team_id', teamId).order('created_at')
           .then(({ data }) => setAdjustments(data || [])))
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'teams', filter: `id=eq.${teamId}` },
         ({ new: row }) => { if (row) { setDone(!!row.end_time); setDisqualified(!!row.disqualified) } })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'games', filter: `id=eq.${gameId}` },
+        ({ new: row }) => { if (row) setGame(row) })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'team_hint_requests', filter: `team_id=eq.${teamId}` },
         () => supabase.from('team_hint_requests').select('keyword_slot, hint_number').eq('team_id', teamId)
           .then(({ data }) => setHintRequests(data || [])))
       .subscribe()
 
-    return () => {
-      supabase.removeChannel(channel)
-      clearInterval(correctCountPoll)
-      clearInterval(gamePoll)
-    }
+    return () => supabase.removeChannel(channel)
   }
 
   function handleChange(slot, value) {
@@ -248,8 +218,8 @@ export default function Team() {
 
   const timeElapsedFraction = (timeLeftMs !== null && totalMs)
     ? Math.max(0, 1 - timeLeftMs / totalMs) : 0
-  const showPacket2 = !sealed && !isExpired && !!earnedPackets.packet2
-  const showPacket3 = !sealed && !isExpired && !!earnedPackets.packet3
+  const showPacket2 = !sealed && !isExpired && !!(game?.packet2_message && (correctCount >= 3 || timeElapsedFraction >= 1 / 3))
+  const showPacket3 = !sealed && !isExpired && !!(game?.packet3_message && (correctCount >= 6 || timeElapsedFraction >= 2 / 3))
 
   const ceremonyDate = game?.start_time && game?.duration_minutes
     ? new Date(new Date(game.start_time).getTime() + (game.duration_minutes + 10) * 60000)
@@ -327,7 +297,7 @@ export default function Team() {
                     <span className="hp-packet-title">Packet 2 Available</span>
                     <span className="hp-packet-toggle">{packet2Collapsed ? '▼ show' : '▲ hide'}</span>
                   </button>
-                  {!packet2Collapsed && <p className="hp-packet-body">{earnedPackets.packet2}</p>}
+                  {!packet2Collapsed && <p className="hp-packet-body">{game.packet2_message}</p>}
                 </div>
               )}
               {showPacket3 && (
@@ -336,7 +306,7 @@ export default function Team() {
                     <span className="hp-packet-title">Packet 3 Available</span>
                     <span className="hp-packet-toggle">{packet3Collapsed ? '▼ show' : '▲ hide'}</span>
                   </button>
-                  {!packet3Collapsed && <p className="hp-packet-body">{earnedPackets.packet3}</p>}
+                  {!packet3Collapsed && <p className="hp-packet-body">{game.packet3_message}</p>}
                 </div>
               )}
 

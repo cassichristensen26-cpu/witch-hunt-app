@@ -79,40 +79,13 @@ export async function requestHint(teamId, slot) {
 }
 
 export async function upsertAnswer(teamId, slot, answer) {
-  // INSERT first; if the row already exists (unique conflict), UPDATE only submitted_answer.
-  // Split avoids needing UPDATE privilege on team_id/keyword_slot (PostgREST upsert
-  // includes all columns in ON CONFLICT DO UPDATE SET, but anon can only UPDATE submitted_answer).
-  const { error: insertError } = await supabase.from('team_answers')
-    .insert({ team_id: teamId, keyword_slot: slot, submitted_answer: answer })
-  if (insertError) {
-    if (insertError.code === '23505') {
-      const { error: updateError } = await supabase.from('team_answers')
-        .update({ submitted_answer: answer })
-        .eq('team_id', teamId)
-        .eq('keyword_slot', slot)
-      if (updateError) throw updateError
-    } else {
-      throw insertError
-    }
-  }
-}
-
-export async function getPackets(teamId) {
-  await ensureAnonSession()
-  const { data: { session } } = await supabase.auth.getSession()
-  const headers = {
-    'Content-Type': 'application/json',
-    'apikey': ANON_KEY,
-    'Authorization': `Bearer ${session.access_token}`,
-  }
-  const res = await fetch(`${EDGE_BASE}/get-packets`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ team_id: teamId }),
-  })
-  const data = await res.json()
-  if (!res.ok) throw new Error(data.error || 'Request failed')
-  return data
+  const { error } = await supabase
+    .from('team_answers')
+    .upsert(
+      { team_id: teamId, keyword_slot: slot, submitted_answer: answer, updated_at: new Date().toISOString() },
+      { onConflict: 'team_id,keyword_slot' }
+    )
+  if (error) throw error
 }
 
 export const modLogin = (password) => edge('moderator-auth', { password })
