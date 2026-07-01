@@ -157,28 +157,34 @@ export default function Team() {
       .eq('team_id', teamId)
       .then(({ data }) => setHintRequests(data || []))
 
+    // Poll correct count and game state instead of Realtime on those tables —
+    // Supabase Realtime delivers full WAL rows which would expose is_correct and
+    // packet messages to anyone watching WebSocket traffic in DevTools.
+    const correctCountPoll = setInterval(refreshCorrectCount, 10000)
+    const gamePoll = setInterval(() => {
+      supabase.from('games')
+        .select('id, name, status, start_time, duration_minutes')
+        .eq('id', gameId).single()
+        .then(({ data }) => { if (data) setGame(data) })
+    }, 15000)
+
     const channel = supabase
       .channel(`team-${teamId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'team_answers', filter: `team_id=eq.${teamId}` },
-        ({ new: row }) => {
-          if (row && !debounceRef.current[row.keyword_slot]) {
-            setAnswers(prev => ({ ...prev, [row.keyword_slot]: row }))
-          }
-          refreshCorrectCount()
-        })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'adjustments', filter: `team_id=eq.${teamId}` },
         () => supabase.from('adjustments').select('*').eq('team_id', teamId).order('created_at')
           .then(({ data }) => setAdjustments(data || [])))
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'teams', filter: `id=eq.${teamId}` },
         ({ new: row }) => { if (row) { setDone(!!row.end_time); setDisqualified(!!row.disqualified) } })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'games', filter: `id=eq.${gameId}` },
-        ({ new: row }) => { if (row) setGame(row) })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'team_hint_requests', filter: `team_id=eq.${teamId}` },
         () => supabase.from('team_hint_requests').select('keyword_slot, hint_number').eq('team_id', teamId)
           .then(({ data }) => setHintRequests(data || [])))
       .subscribe()
 
-    return () => supabase.removeChannel(channel)
+    return () => {
+      supabase.removeChannel(channel)
+      clearInterval(correctCountPoll)
+      clearInterval(gamePoll)
+    }
   }
 
   function handleChange(slot, value) {
