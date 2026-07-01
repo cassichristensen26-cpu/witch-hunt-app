@@ -17,6 +17,7 @@ export default function Team() {
   const [saving, setSaving] = useState({})
   const [saveErrors, setSaveErrors] = useState({})
   const [done, setDone] = useState(false)
+  const [disqualified, setDisqualified] = useState(false)
   const [correctCount, setCorrectCount] = useState(0)
   const [game, setGame] = useState(null)
   const [timeLeftMs, setTimeLeftMs] = useState(null)
@@ -127,8 +128,8 @@ export default function Team() {
       .then(({ data }) => setAdjustments(data || []))
 
     supabase.from('teams')
-      .select('end_time').eq('id', teamId).single()
-      .then(({ data }) => setDone(!!data?.end_time))
+      .select('end_time, disqualified').eq('id', teamId).single()
+      .then(({ data }) => { setDone(!!data?.end_time); setDisqualified(!!data?.disqualified) })
 
     supabase.from('team_hint_requests')
       .select('keyword_slot, hint_number')
@@ -148,7 +149,7 @@ export default function Team() {
         () => supabase.from('adjustments').select('*').eq('team_id', teamId).order('created_at')
           .then(({ data }) => setAdjustments(data || [])))
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'teams', filter: `id=eq.${teamId}` },
-        ({ new: row }) => { if (row) setDone(!!row.end_time) })
+        ({ new: row }) => { if (row) { setDone(!!row.end_time); setDisqualified(!!row.disqualified) } })
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'games', filter: `id=eq.${gameId}` },
         ({ new: row }) => { if (row) setGame(row) })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'team_hint_requests', filter: `team_id=eq.${teamId}` },
@@ -213,10 +214,12 @@ export default function Team() {
   const isWarning = !isExpired && timeLeftMs !== null && warningThresholdMs !== null && timeLeftMs <= warningThresholdMs
   const timerClass = isExpired ? 'expired' : isWarning ? 'warning' : ''
 
+  const sealed = done || disqualified
+
   const timeElapsedFraction = (timeLeftMs !== null && totalMs)
     ? Math.max(0, 1 - timeLeftMs / totalMs) : 0
-  const showPacket2 = !done && !isExpired && !!(game?.packet2_message && (correctCount >= 3 || timeElapsedFraction >= 1 / 3))
-  const showPacket3 = !done && !isExpired && !!(game?.packet3_message && (correctCount >= 6 || timeElapsedFraction >= 2 / 3))
+  const showPacket2 = !sealed && !isExpired && !!(game?.packet2_message && (correctCount >= 3 || timeElapsedFraction >= 1 / 3))
+  const showPacket3 = !sealed && !isExpired && !!(game?.packet3_message && (correctCount >= 6 || timeElapsedFraction >= 2 / 3))
 
   const ceremonyDate = game?.start_time && game?.duration_minutes
     ? new Date(new Date(game.start_time).getTime() + (game.duration_minutes + 10) * 60000)
@@ -253,8 +256,8 @@ export default function Team() {
             </button>
           </div>
 
-          {/* Countdown — hidden once team is marked done */}
-          {!done && timeLeftMs !== null && totalMs && (
+          {/* Countdown — hidden once team is sealed (done or DQ'd) */}
+          {!sealed && timeLeftMs !== null && totalMs && (
             <div className={`hp-timer ${timerClass}`}>
               <div className={`hp-timer-label ${timerClass}`}>{isExpired ? "Time's Up" : 'Time Remaining'}</div>
               <div className={`hp-timer-value ${timerClass}`}>{isExpired ? '0:00' : formatCountdown(timeLeftMs)}</div>
@@ -263,8 +266,8 @@ export default function Team() {
             </div>
           )}
 
-          {/* Award ceremony countdown — shown below expired timer for teams not yet marked done */}
-          {!done && isExpired && ceremonyMs !== null && (
+          {/* Award ceremony countdown — shown below expired timer for unsealed teams */}
+          {!sealed && isExpired && ceremonyMs !== null && (
             <div className={`hp-timer${ceremonyMs === 0 ? ' warning' : ''}`} style={{ marginTop: 12 }}>
               <div className={`hp-timer-label${ceremonyMs === 0 ? ' warning' : ''}`}>
                 {ceremonyMs > 0 ? 'Award Ceremony In' : 'Award Ceremony'}
@@ -311,7 +314,7 @@ export default function Team() {
               <div className="parchment-crease" style={{ margin: '12px -30px 16px' }} />
 
               {/* Award ceremony countdown — shown above the sealed banner */}
-              {done && ceremonyMs !== null && (
+              {sealed && ceremonyMs !== null && (
                 <div className={`hp-timer${ceremonyMs === 0 ? ' warning' : ''}`} style={{ marginBottom: 12 }}>
                   <div className={`hp-timer-label${ceremonyMs === 0 ? ' warning' : ''}`}>
                     {ceremonyMs > 0 ? 'Award Ceremony In' : 'Award Ceremony'}
@@ -323,13 +326,26 @@ export default function Team() {
               )}
 
               {/* Done banner */}
-              {done && (
+              {done && !disqualified && (
                 <div className="hp-done-banner">
                   <div className="hp-done-title">✦ Hunt Complete — Your Answers Are Sealed</div>
                   <div className="hp-done-sub" style={{ marginTop: 6 }}>
                     Scores are being tallied.
                     {ceremonyTimeDisplay && (
                       <> The award ceremony will begin at <strong style={{ fontStyle: 'normal', color: '#0c3414' }}>{ceremonyTimeDisplay}</strong>.</>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Disqualified banner */}
+              {disqualified && (
+                <div className="hp-dq-banner">
+                  <div className="hp-dq-title">✦ Team Disqualified — Your Answers Are Sealed</div>
+                  <div className="hp-dq-sub" style={{ marginTop: 6 }}>
+                    Your team returned after time was called.
+                    {ceremonyTimeDisplay && (
+                      <> The award ceremony will begin at <strong style={{ fontStyle: 'normal', color: '#5a1010' }}>{ceremonyTimeDisplay}</strong>.</>
                     )}
                   </div>
                 </div>
@@ -371,8 +387,8 @@ export default function Team() {
                         type="text"
                         value={ans?.submitted_answer || ''}
                         onChange={e => handleChange(slot, e.target.value)}
-                        placeholder={done ? 'Answers sealed' : 'Write your answer here…'}
-                        disabled={done}
+                        placeholder={sealed ? 'Answers sealed' : 'Write your answer here…'}
+                        disabled={sealed}
                       />
 
                       {kw?.has_hint && (
@@ -387,7 +403,7 @@ export default function Team() {
                             ) : (
                               <span className="hp-hint-limit">Loading hint…</span>
                             )
-                          ) : done ? null
+                          ) : sealed ? null
                           : totalHints >= 3 ? (
                             <span className="hp-hint-limit">Hint limit reached</span>
                           ) : (
