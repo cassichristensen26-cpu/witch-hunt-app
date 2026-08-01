@@ -6,6 +6,7 @@ import ModSetup from './pages/ModSetup'
 import ModGame from './pages/ModGame'
 import ModTeam from './pages/ModTeam'
 import ModRules from './pages/ModRules'
+import Snitch from './pages/Snitch'
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
         <Route path="/mod/game" element={<ModGame />} />
         <Route path="/mod/team/:teamId" element={<ModTeam />} />
         <Route path="/mod/rules" element={<ModRules />} />
+        <Route path="/snitch/:key" element={<Snitch />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

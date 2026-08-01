@@ -88,6 +88,40 @@ export async function upsertAnswer(teamId, slot, answer) {
   if (error) throw error
 }
 
+// ---- Catch the Snitch mini-game (fully separate from the main game) ----
+
+// Submit a guess. Uses the team's own JWT (like requestHint) so the edge
+// function can confirm the user belongs to the team. click_ts is the epoch-ms
+// moment the square was tapped — the server evaluates against THAT time.
+export async function snitchGuess(teamId, square, clickTs) {
+  await ensureAnonSession()
+  const { data: { session } } = await supabase.auth.getSession()
+  const headers = {
+    'Content-Type': 'application/json',
+    'apikey': ANON_KEY,
+    'Authorization': `Bearer ${session.access_token}`,
+  }
+  const res = await fetch(`${EDGE_BASE}/snitch-guess`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ team_id: teamId, square, click_ts: clickTs }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Request failed')
+  return data
+}
+
+// Read this team's current snitch state (guesses used / caught). Null if not started.
+export async function getSnitchState(teamId) {
+  const { data, error } = await supabase
+    .from('snitch_games')
+    .select('guesses, penalty_guesses, caught')
+    .eq('team_id', teamId)
+    .maybeSingle()
+  if (error) throw error
+  return data
+}
+
 export const modLogin = (password) => edge('moderator-auth', { password })
 export const modCreateGame = (token, payload) => edge('moderator-create-game', payload, token)
 export const modStartGame = (token, gameId) => edge('moderator-start-game', { game_id: gameId }, token)
