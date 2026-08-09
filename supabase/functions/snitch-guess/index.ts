@@ -6,29 +6,46 @@ const GRID = 20
 const FREE_GUESSES = 3
 const PENALTY_MINUTES = 1
 
+// The snitch's circuit: slot index (0..19) -> square index (0..19). Drawn at
+// random once, then fixed forever — every game puts the snitch on the same
+// square at the same second, so one answer key works for every game.
+//
+// It lives in the SNITCH_MAP function secret, NOT in this file: the repo is
+// public and this array is the answer key. To set it (a permutation of 0..19):
+//   supabase secrets set SNITCH_MAP='[3,11,...]' --project-ref <ref>
+function loadMapping(): number[] | null {
+  const raw = Deno.env.get('SNITCH_MAP')
+  if (!raw) return null
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    return null
+  }
+  if (!Array.isArray(parsed) || parsed.length !== GRID) return null
+  const seen = new Set<number>()
+  for (const n of parsed) {
+    if (!Number.isInteger(n) || n < 0 || n >= GRID || seen.has(n)) return null
+    seen.add(n)
+  }
+  return parsed as number[]
+}
+
+const MAPPING = loadMapping()
+
 // Which 3-second slot (0..19) a given epoch-ms timestamp falls in, within its minute.
 function slotForTs(ts: number): number {
   const secondsInMinute = Math.floor(ts / 1000) % 60
   return Math.floor(secondsInMinute / 3)
 }
 
-// Fisher-Yates shuffle of [0..n-1] using crypto randomness.
-function randomPermutation(n: number): number[] {
-  const arr = Array.from({ length: n }, (_, i) => i)
-  const rand = new Uint32Array(n)
-  crypto.getRandomValues(rand)
-  for (let i = n - 1; i > 0; i--) {
-    const j = rand[i] % (i + 1)
-    const tmp = arr[i]
-    arr[i] = arr[j]
-    arr[j] = tmp
-  }
-  return arr
-}
-
 Deno.serve(async (req) => {
   const cors = handleCors(req)
   if (cors) return cors
+
+  // Fail closed, and before the guess counter moves — a misconfigured secret
+  // must never cost a team a guess.
+  if (!MAPPING) return err('Snitch map not configured', 500)
 
   const url = Deno.env.get('SUPABASE_URL')!
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
@@ -59,22 +76,6 @@ Deno.serve(async (req) => {
     .eq('user_id', user.id).eq('team_id', team_id).maybeSingle()
   if (!session) return err('Not authorized for this team', 403)
 
-  const { data: team } = await service.from('teams').select('game_id').eq('id', team_id).single()
-  if (!team) return err('Team not found', 404)
-
-  // Load (or lazily create) the per-game snitch mapping — shared by all teams in the game.
-  let { data: config } = await service
-    .from('snitch_config').select('mapping').eq('game_id', team.game_id).maybeSingle()
-  if (!config) {
-    await service.from('snitch_config')
-      .insert({ game_id: team.game_id, mapping: randomPermutation(GRID) })
-    // Re-read (handles the race where two first-guesses insert at once; PK dedupes)
-    const reread = await service
-      .from('snitch_config').select('mapping').eq('game_id', team.game_id).maybeSingle()
-    config = reread.data
-  }
-  if (!config) return err('Config unavailable', 500)
-
   // Already caught? Game over for this team.
   const { data: existing } = await service
     .from('snitch_games').select('guesses, caught').eq('team_id', team_id).maybeSingle()
@@ -98,7 +99,7 @@ Deno.serve(async (req) => {
 
   // Evaluate using the CLICK timestamp the client captured — NOT the current
   // time — so confirming after the 3-second window still uses the click moment.
-  const correctSquare = config.mapping[slotForTs(click_ts)]
+  const correctSquare = MAPPING[slotForTs(click_ts)]
   const caught = square === correctSquare
 
   if (caught) {

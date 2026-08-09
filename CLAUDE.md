@@ -51,10 +51,22 @@ Key tables:
 - `team_hint_requests` — tracks which hints claimed per team/slot
 - `team_finish_events` — history of done/undone toggles
 - `rules` — single row (id=1), global rules text visible to all teams
+- `snitch_games` — one row per team: guess count, penalty count, caught flag
 
 ## Column-Level Security (team_answers)
 
 Teams cannot see: `is_correct`, `moderator_override`, `change_count`, `change_window_start`. Applied via REVOKE/GRANT, not RLS. Moderator edge functions use service role key which bypasses this.
+
+**Implemented via**: `REVOKE SELECT ON team_answers FROM anon, authenticated;` then `GRANT SELECT (id, team_id, keyword_slot, submitted_answer, updated_at) ...`. INSERT/UPDATE table-level grants are left intact so the PostgREST upsert (which SETs the conflict-key columns) keeps working. Same pattern hides `keywords.correct_answer` and `keywords.hint`. **Do not** apply column REVOKE/GRANT to the `games` table — the Team page's `.select()` and Realtime subscription break if a listed column becomes unreadable (this killed the timer once).
+
+## Write Lock After Done/DQ (team_answers RLS)
+
+The `team insert own answers` and `team update own answers` RLS policies also block writes once the team is finished:
+```
+AND NOT EXISTS (SELECT 1 FROM teams t WHERE t.id = team_answers.team_id
+                AND (t.end_time IS NOT NULL OR t.disqualified = true))
+```
+So a done or disqualified team cannot INSERT/UPDATE answers even via the raw API. The Team page already disables inputs when `sealed` (done || disqualified); this is server-side defense-in-depth. A rejected write surfaces as an RLS error caught silently in `handleChange`'s `console.error('Save failed:', e)`.
 
 ## Auth
 
@@ -81,6 +93,7 @@ All moderator functions validate `x-mod-token` via `validateModToken` in `_share
 | `moderator-override-answer` | UPDATE is_correct + moderator_override=true (plain UPDATE, not upsert — avoids BEFORE INSERT trigger) |
 | `moderator-save-rules` | UPDATE global rules row |
 | `request-hint` | Atomic hint claim via `claim_hint` RPC (advisory lock prevents race conditions) |
+| `snitch-guess` | Judge a Catch the Snitch guess; writes 1-min penalties past the 3 free guesses |
 
 ## Deploying Edge Functions
 
@@ -134,6 +147,23 @@ Fires on `BEFORE INSERT OR UPDATE OF submitted_answer`. Resets `moderator_overri
 ## Packet Pickup Messages
 
 Shown on team page when ≥3 correct OR ≥1/3 time elapsed (packet 2) and ≥6 correct OR ≥2/3 time elapsed (packet 3). Collapsible, collapse state persisted in localStorage.
+
+## Catch the Snitch (hidden mini-game)
+
+Reached only via `/snitch/:key` where key must equal `SNITCH_KEY` in `Snitch.jsx` (currently `mischief-managed`); any other key redirects to `/`. Teams tap one of 20 squares (4 cols a–d × 5 rows 1–5, index `i` → `${a+i%4}${floor(i/4)+1}`).
+
+The snitch occupies one square per 3-second slot, 20 slots per minute, and the circuit repeats every minute. Slot is `floor((floor(ts/1000) % 60) / 3)` off the *click* timestamp the client captured, not the confirm time.
+
+The slot→square map is **fixed for all games, not per-game random**, so one answer key works every time. It lives in the `SNITCH_MAP` function secret, deliberately *not* in the repo — this repo is public and the map is the answer key. It is a JSON permutation of 0–19; `snitch-guess` validates it at boot and returns 500 before touching the guess counter if it is missing or malformed. To set or rotate it:
+
+```bash
+~/.local/node/bin/supabase secrets set SNITCH_MAP='[3,11,...]' --project-ref lzykscaespouwxokvewy
+~/.local/node/bin/supabase functions deploy snitch-guess --project-ref lzykscaespouwxokvewy
+```
+
+**Anyone self-hosting this must set `SNITCH_MAP`** — the mini-game returns 500 on every guess until they do.
+
+3 free guesses per team; each guess after that inserts a 1-min `time_penalty` adjustment on the real leaderboard. Catching the snitch sets `caught` and ends the mini-game for that team.
 
 ## GitHub
 
