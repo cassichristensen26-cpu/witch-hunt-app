@@ -33,6 +33,13 @@ function loadMapping(): number[] | null {
 
 const MAPPING = loadMapping()
 
+// Where the team goes once they catch it. Kept in a secret for the same reason
+// as the map — this is the reward, and the repo is public. Set the LOCATION
+// only ("the old mill"); the page wraps it in "Go to ___ to find the next
+// ingredient". Unset is fine: the page then sends them to their moderator.
+//   supabase secrets set SNITCH_REWARD='the old mill' --project-ref <ref>
+const REWARD = Deno.env.get('SNITCH_REWARD')?.trim() || null
+
 // Which 3-second slot (0..19) a given epoch-ms timestamp falls in, within its minute.
 function slotForTs(ts: number): number {
   const secondsInMinute = Math.floor(ts / 1000) % 60
@@ -80,7 +87,7 @@ Deno.serve(async (req) => {
   const { data: existing } = await service
     .from('snitch_games').select('guesses, caught').eq('team_id', team_id).maybeSingle()
   if (existing?.caught) {
-    return json({ caught: true, already: true, guesses: existing.guesses })
+    return json({ caught: true, already: true, guesses: existing.guesses, reward: REWARD })
   }
 
   // Increment the team's shared guess counter (start the game on first guess).
@@ -106,7 +113,7 @@ Deno.serve(async (req) => {
     await service.from('snitch_games')
       .update({ caught: true, caught_at: new Date().toISOString() })
       .eq('team_id', team_id)
-    return json({ caught: true, guesses })
+    return json({ caught: true, guesses, square: correctSquare, reward: REWARD })
   }
 
   // Miss. Every guess beyond the free allotment costs the team 1 minute.

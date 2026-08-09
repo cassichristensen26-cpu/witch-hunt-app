@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, Navigate } from 'react-router-dom'
 import { joinTeam, snitchGuess, getSnitchState } from '../lib/api'
 import '../styles/hp-scroll.css'
+import '../styles/snitch.css'
 
 // Secret path segment — only people with the link get in.
 // Change this string to rotate the link. Link is: /snitch/mischief-managed
@@ -10,6 +11,10 @@ const SNITCH_KEY = 'mischief-managed'
 const COLS = 4 // a-d
 const ROWS = 5 // 1-5
 const CELLS = COLS * ROWS
+
+// Where the catch is remembered locally, so a reload still shows the snitch
+// sitting in the square it was caught in (the server stores only that it was).
+const CAUGHT_KEY = 'wh_snitch_caught'
 
 // Stable index 0..19 -> human label like "a1".."d5" (col letter + row number)
 function labelFor(i) {
@@ -20,6 +25,15 @@ function labelFor(i) {
 
 function formatClock(ts) {
   return new Date(ts).toLocaleTimeString()
+}
+
+function readCaught() {
+  try {
+    const raw = localStorage.getItem(CAUGHT_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
 }
 
 export default function Snitch() {
@@ -43,6 +57,8 @@ export default function Snitch() {
   const [loading, setLoading] = useState(true)
   const [guesses, setGuesses] = useState(0)
   const [caught, setCaught] = useState(false)
+  const [caughtSquare, setCaughtSquare] = useState(null)
+  const [reward, setReward] = useState(null)
   const [pending, setPending] = useState(null) // { square, label, ts }
   const [submitting, setSubmitting] = useState(false)
   const [feedback, setFeedback] = useState(null) // { kind: 'hit'|'miss'|'penalty', text }
@@ -67,6 +83,13 @@ export default function Snitch() {
         if (cancelled) return
         setGuesses(state?.guesses ?? 0)
         setCaught(!!state?.caught)
+        if (state?.caught) {
+          const remembered = readCaught()
+          if (remembered?.teamId === team.teamId) {
+            setCaughtSquare(remembered.square ?? null)
+            setReward(remembered.reward ?? null)
+          }
+        }
       } catch {
         // Stale/mismatched session — fall back to code login
         if (!cancelled) {
@@ -127,8 +150,17 @@ export default function Snitch() {
       const res = await snitchGuess(team.teamId, pending.square, pending.ts)
       setGuesses(res.guesses ?? guesses + 1)
       if (res.caught) {
+        // Stay on the board — the snitch lands in the square they picked.
+        const square = res.square ?? pending.square
         setCaught(true)
-        setFeedback({ kind: 'hit', text: `You caught the snitch on ${pending.label}!` })
+        setCaughtSquare(square)
+        setReward(res.reward ?? null)
+        try {
+          localStorage.setItem(CAUGHT_KEY, JSON.stringify({
+            teamId: team.teamId, square, reward: res.reward ?? null,
+          }))
+        } catch { /* private mode — the banner still shows this session */ }
+        setFeedback({ kind: 'hit', text: `Caught on ${pending.label}!` })
       } else if (res.penalty_applied) {
         setFeedback({
           kind: 'penalty',
@@ -162,11 +194,10 @@ export default function Snitch() {
 
   if (loading) {
     return (
-      <div className="hp-page">
-        <div className="parchment-scene">
-          <div className="parchment-center parchment">
-            <div className="hp-subtitle">Loading…</div>
-          </div>
+      <div className="snitch-page">
+        <div className="snitch-field" />
+        <div className="snitch-shell">
+          <p className="snitch-hint">Loading…</p>
         </div>
       </div>
     )
@@ -175,9 +206,10 @@ export default function Snitch() {
   // Not logged in -> code entry (same code used to join at game start)
   if (!team?.teamId) {
     return (
-      <div className="hp-page">
-        <div className="parchment-scene">
-          <div className="parchment-center parchment">
+      <div className="snitch-page">
+        <div className="snitch-field" />
+        <div className="snitch-shell">
+          <div className="parchment" style={{ width: '100%', padding: 26 }}>
             <div className="hp-title">Catch the Snitch</div>
             <div className="hp-subtitle">Enter your team's join code to play</div>
             <form onSubmit={handleLogin}>
@@ -204,105 +236,63 @@ export default function Snitch() {
     )
   }
 
+  const bannerText = reward
+    ? `Go to ${reward} to find the next ingredient`
+    : 'Find your moderator to collect the next ingredient'
+
   return (
-    <div className="hp-page">
-      <div className="parchment-scene">
-        <div className="parchment-center parchment" style={{ maxWidth: 460 }}>
-          <div className="hp-title">Catch the Snitch</div>
-          <div className="hp-subtitle" style={{ marginBottom: 4 }}>{team.teamName}</div>
+    <div className="snitch-page">
+      <div className="snitch-field" />
 
-          {caught ? (
-            <div style={{ textAlign: 'center', padding: '24px 8px' }}>
-              <div style={{ fontSize: 52, lineHeight: 1 }}>🎉</div>
-              <p style={{ fontSize: 20, fontWeight: 700, margin: '14px 0 6px' }}>
-                You caught the snitch!
-              </p>
-              <p style={{ opacity: 0.75 }}>Your game is complete. Nothing left to do here.</p>
-            </div>
-          ) : (
-            <>
-              <p style={{ textAlign: 'center', opacity: 0.8, fontSize: 14, margin: '0 0 4px' }}>
-                Tap a square to guess where the snitch is hiding.
-              </p>
-              <p style={{ textAlign: 'center', fontSize: 13, margin: '0 0 12px' }}>
-                Guesses used: <strong>{guesses}</strong> ·{' '}
-                {freeLeft > 0 ? (
-                  <span>{freeLeft} free left</span>
-                ) : (
-                  <span style={{ color: '#a4443a' }}>each guess now costs 1 min</span>
-                )}
-              </p>
-              <p style={{ textAlign: 'center', fontFamily: 'monospace', fontSize: 13, opacity: 0.6, margin: '0 0 14px' }}>
-                {formatClock(now)}
-              </p>
+      <div className="snitch-shell">
+        <h1 className="snitch-title">Catch the Snitch</h1>
+        <p className="snitch-team">{team.teamName}</p>
 
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: `repeat(${COLS}, 1fr)`,
-                  gap: 8,
-                  maxWidth: 320,
-                  margin: '0 auto',
-                }}
-              >
-                {Array.from({ length: CELLS }, (_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => handleCellClick(i)}
-                    disabled={submitting || !!pending}
-                    style={{
-                      aspectRatio: '1 / 1',
-                      borderRadius: 10,
-                      border: '1px solid rgba(90,60,30,0.35)',
-                      background: 'rgba(255,255,255,0.35)',
-                      fontFamily: 'monospace',
-                      fontSize: 14,
-                      fontWeight: 600,
-                      color: '#5a3c1e',
-                      cursor: submitting || pending ? 'default' : 'pointer',
-                    }}
-                  >
-                    {labelFor(i)}
-                  </button>
-                ))}
-              </div>
+        {!caught && (
+          <>
+            <p className="snitch-hint">Tap a square to guess where the snitch is hiding.</p>
+            <p className="snitch-status">
+              Guesses used: <strong>{guesses}</strong> ·{' '}
+              {freeLeft > 0
+                ? <span>{freeLeft} free left</span>
+                : <span className="costly">each guess now costs 1 min</span>}
+            </p>
+            <p className="snitch-clock">{formatClock(now)}</p>
+          </>
+        )}
 
-              {feedback && (
-                <p
-                  style={{
-                    textAlign: 'center',
-                    marginTop: 16,
-                    fontWeight: 600,
-                    color:
-                      feedback.kind === 'hit'
-                        ? '#2e7d32'
-                        : feedback.kind === 'penalty'
-                          ? '#a4443a'
-                          : '#5a3c1e',
-                  }}
-                >
-                  {feedback.text}
-                </p>
+        <div className="snitch-grid">
+          {Array.from({ length: CELLS }, (_, i) => (
+            <button
+              key={i}
+              className={`snitch-cell${caught && caughtSquare === i ? ' is-caught' : ''}`}
+              onClick={() => handleCellClick(i)}
+              disabled={submitting || !!pending || caught}
+              aria-label={caught && caughtSquare === i ? `Snitch caught on ${labelFor(i)}` : `Guess ${labelFor(i)}`}
+            >
+              <span className="snitch-cell-label">{labelFor(i)}</span>
+              {caught && caughtSquare === i && (
+                <img className="snitch-caught-img" src="/snitch.png" alt="The golden snitch" />
               )}
-            </>
-          )}
+            </button>
+          ))}
         </div>
+
+        {feedback && !caught && (
+          <p className={`snitch-feedback ${feedback.kind}`}>{feedback.text}</p>
+        )}
+
+        {caught && (
+          <div className="snitch-banner">
+            <img className="snitch-banner-img" src="/banner.png" alt="" />
+            <p className="snitch-banner-text">{bannerText}</p>
+          </div>
+        )}
       </div>
 
       {/* Confirmation modal */}
       {pending && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 20,
-            zIndex: 50,
-          }}
-        >
+        <div className="snitch-modal-scrim">
           <div className="parchment" style={{ maxWidth: 340, width: '100%', padding: 22, textAlign: 'center' }}>
             <p style={{ fontSize: 16, margin: '0 0 6px' }}>
               You clicked <strong>{pending.label}</strong>
@@ -310,10 +300,10 @@ export default function Snitch() {
             <p style={{ fontFamily: 'monospace', fontSize: 14, opacity: 0.75, margin: '0 0 18px' }}>
               at {formatClock(pending.ts)}
             </p>
-            <div style={{ display: 'flex', gap: 10 }}>
+            <div className="snitch-modal-row">
               <button
                 className="hp-btn-primary"
-                style={{ flex: 1, opacity: 0.7 }}
+                style={{ opacity: 0.7 }}
                 onClick={() => setPending(null)}
                 disabled={submitting}
               >
@@ -321,7 +311,6 @@ export default function Snitch() {
               </button>
               <button
                 className="hp-btn-primary"
-                style={{ flex: 1 }}
                 onClick={confirmGuess}
                 disabled={submitting}
               >

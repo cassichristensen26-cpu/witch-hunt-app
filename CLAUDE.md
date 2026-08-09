@@ -165,6 +165,18 @@ The slot→square map is **fixed for all games, not per-game random**, so one an
 
 3 free guesses per team; each guess after that inserts a 1-min `time_penalty` adjustment on the real leaderboard. Catching the snitch sets `caught` and ends the mini-game for that team.
 
+**Catching does not navigate away.** The board stays put; `snitch.png` lands in the caught square and the `banner.png` ribbon unfurls below it reading "Go to ___ to find the next ingredient". The blank comes from the `SNITCH_REWARD` secret (the *location only*, e.g. `the old mill`), returned by `snitch-guess` on catch. Unset is fine — the banner then reads "Find your moderator to collect the next ingredient". Set it the same way as the map:
+
+```bash
+~/.local/node/bin/supabase secrets set SNITCH_REWARD='the old mill' --project-ref lzykscaespouwxokvewy
+```
+
+The caught square is remembered in `localStorage` under `wh_snitch_caught`, since the DB records only *that* a team caught it, not where. Clearing storage means a reload shows the banner without the snitch on a square.
+
+### Snitch page art
+
+`public/quidditch.jpg` (pitch background), `public/snitch.png`, `public/banner.png`. The two PNGs were keyed from white-background JPEGs — the originals stay untracked at the repo root, same as `parchment texture.jpg`. The white was removed with a border-seeded flood fill (so light tones *inside* the art stay opaque); there's no ImageMagick or PIL on this machine, so it was done via `sips` → BMP → a hand-rolled PNG writer. The banner's text box insets in `snitch.css` are measured from the artwork (flat panel spans x 12.7%–87.5%, y 31.1%–63.3%) — re-measure if the banner art is ever replaced.
+
 ## GitHub
 
 - **Repo**: https://github.com/cassichristensen26-cpu/witch-hunt-app

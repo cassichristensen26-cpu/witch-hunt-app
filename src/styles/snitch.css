@@ -1,0 +1,256 @@
+/* Catch the Snitch — the board sits on the pitch itself.
+   Fonts (Cinzel, IM Fell English) are loaded globally in index.html. */
+
+.snitch-page {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 28px 16px 40px;
+  overflow: hidden;
+}
+
+/* The stadium photo, held still behind everything */
+.snitch-field {
+  position: fixed;
+  inset: 0;
+  background-image: url('/quidditch.jpg');
+  background-size: cover;
+  /* Frame the pitch, not the castle — the turf sits low in the photo */
+  background-position: center 72%;
+  z-index: 0;
+}
+
+/* Light wash — enough for type to hold, not so much that the pitch goes black */
+.snitch-field::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 50%, rgba(10, 18, 8, 0) 0%, rgba(6, 11, 5, 0.45) 85%),
+    linear-gradient(to bottom, rgba(8, 14, 7, 0.42) 0%, rgba(6, 11, 5, 0.20) 42%, rgba(5, 9, 4, 0.50) 100%);
+}
+
+.snitch-shell {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 460px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.snitch-title {
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+  font-size: clamp(26px, 7vw, 34px);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #f4e3b4;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.85), 0 0 30px rgba(0, 0, 0, 0.6);
+  margin: 0;
+  text-align: center;
+}
+
+.snitch-team {
+  font-family: 'IM Fell English', serif;
+  font-size: 17px;
+  color: #e8d9b0;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9);
+  margin: 0 0 2px;
+}
+
+.snitch-hint {
+  font-family: 'IM Fell English', serif;
+  font-size: 14px;
+  color: rgba(240, 230, 205, 0.82);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9);
+  text-align: center;
+  margin: 0;
+}
+
+.snitch-status {
+  font-family: 'IM Fell English', serif;
+  font-size: 14px;
+  color: rgba(240, 230, 205, 0.9);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9);
+  margin: 2px 0 0;
+}
+
+.snitch-status strong { color: #f4e3b4; }
+.snitch-status .costly { color: #ffb4a2; }
+
+.snitch-clock {
+  font-family: 'Cinzel', serif;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  color: rgba(238, 226, 196, 0.62);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9);
+  font-variant-numeric: tabular-nums;
+  margin: 2px 0 14px;
+}
+
+/* ---- the board ---- */
+
+.snitch-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 9px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.snitch-cell {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: 6px;
+  overflow: visible; /* buttons clip by default; the snitch spills past its square */
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  background:
+    linear-gradient(160deg, rgba(74, 116, 52, 0.42) 0%, rgba(38, 66, 28, 0.52) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 2px 10px rgba(0, 0, 0, 0.35);
+  color: #f0e7cd;
+  font-family: 'Cinzel', serif;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
+  cursor: pointer;
+  transition: transform 0.14s ease, background 0.14s ease, border-color 0.14s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.snitch-cell:not(:disabled):hover {
+  background: linear-gradient(160deg, rgba(96, 142, 68, 0.52) 0%, rgba(50, 82, 36, 0.58) 100%);
+  border-color: rgba(255, 255, 255, 0.72);
+}
+
+.snitch-cell:not(:disabled):active { transform: scale(0.96); }
+.snitch-cell:disabled { cursor: default; }
+.snitch-cell:focus-visible { outline: 2px solid #f0c75e; outline-offset: 2px; }
+
+/* The square the snitch was caught in */
+.snitch-cell.is-caught {
+  border-color: rgba(240, 199, 94, 0.95);
+  background: radial-gradient(circle at 50% 50%, rgba(240, 199, 94, 0.42) 0%, rgba(120, 84, 20, 0.34) 70%);
+  box-shadow: 0 0 26px rgba(240, 199, 94, 0.55), inset 0 0 18px rgba(255, 216, 130, 0.35);
+}
+
+.snitch-cell.is-caught .snitch-cell-label { opacity: 0.35; }
+
+/* Overflows its square a little, so it reads as hovering above the pitch */
+.snitch-caught-img {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 215%;
+  max-width: none; /* Tailwind preflight caps images at 100% */
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  filter:
+    drop-shadow(0 0 14px rgba(255, 214, 120, 0.95))
+    drop-shadow(0 6px 14px rgba(0, 0, 0, 0.55));
+  animation: snitch-land 0.65s cubic-bezier(0.16, 0.9, 0.3, 1.3) both,
+             snitch-hover 3.2s ease-in-out 0.65s infinite;
+  z-index: 2;
+}
+
+@keyframes snitch-land {
+  from { opacity: 0; transform: translate(-50%, -175%) scale(1.5) rotate(-12deg); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+}
+
+@keyframes snitch-hover {
+  0%, 100% { transform: translate(-50%, -50%); }
+  50%      { transform: translate(-50%, -58%); }
+}
+
+/* ---- feedback line ---- */
+
+.snitch-feedback {
+  font-family: 'IM Fell English', serif;
+  font-size: 15.5px;
+  font-weight: 600;
+  text-align: center;
+  margin: 16px 0 0;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.95);
+}
+
+.snitch-feedback.hit { color: #ffe08a; }
+.snitch-feedback.penalty { color: #ffb4a2; }
+.snitch-feedback.miss { color: #ece0c0; }
+
+/* ---- the reward banner ---- */
+
+.snitch-banner {
+  position: relative;
+  z-index: 3;
+  width: 100%;
+  max-width: min(96vw, 620px);
+  margin: 22px auto 0;
+  animation: banner-unfurl 0.75s cubic-bezier(0.2, 0.8, 0.25, 1) 0.35s both;
+}
+
+.snitch-banner-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.65));
+}
+
+/* Sits in the ribbon's flat middle panel, inside the rolled ends. The insets
+   are measured from the artwork: the panel spans x 12.7%-87.5%, y 31.1%-63.3%. */
+.snitch-banner-text {
+  position: absolute;
+  left: 14.5%;
+  right: 14.5%;
+  top: 31%;
+  height: 32.2%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-family: 'IM Fell English', serif;
+  font-size: clamp(13px, 3.4vw, 19px);
+  line-height: 1.25;
+  color: #3a1d05;
+  text-shadow: 0 1px 0 rgba(255, 240, 205, 0.45);
+  padding: 0 2%;
+}
+
+@keyframes banner-unfurl {
+  from { opacity: 0; transform: scaleX(0.55) translateY(10px); }
+  to   { opacity: 1; transform: scaleX(1) translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .snitch-caught-img,
+  .snitch-banner { animation: none; }
+  .snitch-caught-img { opacity: 1; }
+}
+
+/* ---- confirmation modal ---- */
+
+.snitch-modal-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 50;
+}
+
+.snitch-modal-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.snitch-modal-row .hp-btn-primary { flex: 1; }
