@@ -137,6 +137,21 @@ export default function Snitch() {
     }
   }
 
+  // Drops back to the join-code screen rather than navigating to "/" like the
+  // team page does — this page is behind a secret link, so sending them home
+  // would strand them without it.
+  function handleLeave() {
+    localStorage.removeItem('wh_team')
+    localStorage.removeItem(CAUGHT_KEY)
+    setTeam(null)
+    setGuesses(0)
+    setCaught(false)
+    setCaughtSquare(null)
+    setReward(null)
+    setFeedback(null)
+    setCode('')
+  }
+
   function handleCellClick(i) {
     if (caught || pending || submitting) return
     setFeedback(null)
@@ -302,6 +317,10 @@ export default function Snitch() {
             <p className="snitch-banner-text">{bannerText}</p>
           </div>
         )}
+
+        <button className="snitch-leave" onClick={handleLeave}>
+          Leave team
+        </button>
       </div>
 
       {/* Confirmation modal */}
