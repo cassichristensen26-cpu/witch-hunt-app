@@ -246,13 +246,19 @@ export default function Snitch() {
 
       <div className="snitch-shell">
         <h1 className="snitch-title">Catch the Snitch</h1>
-        <p className="snitch-team">{team.teamName}</p>
 
         {!caught && (
           <>
-            <p className="snitch-hint">Tap a square to guess where the snitch is hiding.</p>
+            <p className="snitch-brief">
+              To find the next ingredient, first catch the snitch. The snitch is always moving
+              and will only be in each square for 3 seconds at a time. However, this snitch has
+              a glitch and is repeating its course every minute. You have three chances to catch
+              the snitch, after which each additional guess will add a minute to your team's
+              time. Good luck!
+            </p>
             <p className="snitch-status">
-              Guesses used: <strong>{guesses}</strong> ·{' '}
+              Guesses used: <strong>{guesses}</strong>
+              <span className="snitch-sep" aria-hidden="true">|</span>
               {freeLeft > 0
                 ? <span>{freeLeft} free left</span>
                 : <span className="costly">each guess now costs 1 min</span>}
@@ -277,6 +283,14 @@ export default function Snitch() {
             </button>
           ))}
         </div>
+
+        {!caught && (
+          <ul className="snitch-fixtures">
+            <li>Holyhead Harpies v Puddlemere United = <em>b3</em></li>
+            <li>Montrose Magpies v Appleby Arrows = <em>d5</em></li>
+            <li>Tutshill Tornados v Ballycastle Bats = <em>c1</em></li>
+          </ul>
+        )}
 
         {feedback && !caught && (
           <p className={`snitch-feedback ${feedback.kind}`}>{feedback.text}</p>

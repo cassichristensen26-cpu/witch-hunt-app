@@ -65,6 +65,19 @@
   margin: 0 0 2px;
 }
 
+/* Left-aligned inside a centred column — a paragraph this long is hard to
+   read ragged on both sides. */
+.snitch-brief {
+  font-family: 'IM Fell English', serif;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: rgba(242, 233, 210, 0.92);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.95);
+  text-align: left;
+  max-width: 40ch;
+  margin: 6px auto 12px;
+}
+
 .snitch-hint {
   font-family: 'IM Fell English', serif;
   font-size: 14px;
@@ -84,6 +97,15 @@
 
 .snitch-status strong { color: #f4e3b4; }
 .snitch-status .costly { color: #ffb4a2; }
+
+/* A proper rule between the two readings — the old middot ran them together */
+.snitch-sep {
+  display: inline-block;
+  margin: 0 14px;
+  color: rgba(240, 230, 205, 0.5);
+  font-weight: 300;
+  transform: scaleY(1.6);
+}
 
 .snitch-clock {
   font-family: 'Cinzel', serif;
@@ -170,6 +192,35 @@
   50%      { transform: translate(-50%, -58%); }
 }
 
+/* ---- fixtures under the board ---- */
+
+.snitch-fixtures {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.snitch-fixtures li {
+  text-align: center;
+  font-family: 'IM Fell English', serif;
+  font-size: 14px;
+  color: rgba(240, 230, 205, 0.9);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.95);
+}
+
+.snitch-fixtures em {
+  font-family: 'Cinzel', serif;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #f0c75e;
+}
+
 /* ---- feedback line ---- */
 
 .snitch-feedback {
@@ -192,7 +243,10 @@
   z-index: 3;
   width: 100%;
   max-width: min(96vw, 620px);
-  margin: 22px auto 0;
+  /* Negative to cancel the transparent space the artwork carries above the
+     ribbon (~21% of its height). A percentage keeps it in step as the banner
+     scales, since percentage margins resolve against the container's width. */
+  margin: -6% auto 0;
   animation: banner-unfurl 0.75s cubic-bezier(0.2, 0.8, 0.25, 1) 0.35s both;
 }
 
