@@ -250,7 +250,7 @@
   padding-top: 11px;
 }
 
-/* ---- feedback line ---- */
+/* ---- failure notice (no hit/miss commentary — see confirmGuess) ---- */
 
 .snitch-feedback {
   font-family: 'IM Fell English', serif;
@@ -261,9 +261,7 @@
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.95);
 }
 
-.snitch-feedback.hit { color: #ffe08a; }
-.snitch-feedback.penalty { color: #ffb4a2; }
-.snitch-feedback.miss { color: #ece0c0; }
+.snitch-feedback.error { color: #ffb4a2; }
 
 /* ---- the reward banner ---- */
 

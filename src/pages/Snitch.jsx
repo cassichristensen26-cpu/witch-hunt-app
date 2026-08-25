@@ -61,7 +61,7 @@ export default function Snitch() {
   const [reward, setReward] = useState(null)
   const [pending, setPending] = useState(null) // { square, label, ts }
   const [submitting, setSubmitting] = useState(false)
-  const [feedback, setFeedback] = useState(null) // { kind: 'hit'|'miss'|'penalty', text }
+  const [feedback, setFeedback] = useState(null) // { kind: 'error', text } — failures only
   const [now, setNow] = useState(Date.now())
 
   // Live clock so teams can feel the 3-second cadence
@@ -163,6 +163,8 @@ export default function Snitch() {
     setSubmitting(true)
     try {
       const res = await snitchGuess(team.teamId, pending.square, pending.ts)
+      // No hit/miss commentary — the guess counter above the board already
+      // says where the team stands. `feedback` now only carries failures.
       setGuesses(res.guesses ?? guesses + 1)
       if (res.caught) {
         // Stay on the board — the snitch lands in the square they picked.
@@ -175,21 +177,6 @@ export default function Snitch() {
             teamId: team.teamId, square, reward: res.reward ?? null,
           }))
         } catch { /* private mode — the banner still shows this session */ }
-        setFeedback({ kind: 'hit', text: `Caught on ${pending.label}!` })
-      } else if (res.penalty_applied) {
-        setFeedback({
-          kind: 'penalty',
-          text: `Missed ${pending.label}. That cost your team 1 minute (guess ${res.guesses}).`,
-        })
-      } else {
-        const left = res.free_remaining ?? 0
-        setFeedback({
-          kind: 'miss',
-          text:
-            left > 0
-              ? `Missed ${pending.label}. ${left} free ${left === 1 ? 'guess' : 'guesses'} left.`
-              : `Missed ${pending.label}. No free guesses left — the next one costs 1 minute.`,
-        })
       }
     } catch (err) {
       if (/authorized|Unauthorized/i.test(err.message)) {
@@ -197,7 +184,7 @@ export default function Snitch() {
         localStorage.removeItem('wh_team')
         setTeam(null)
       } else {
-        setFeedback({ kind: 'miss', text: err.message })
+        setFeedback({ kind: 'error', text: err.message })
       }
     } finally {
       setSubmitting(false)
@@ -317,7 +304,7 @@ export default function Snitch() {
         )}
 
         {feedback && !caught && (
-          <p className={`snitch-feedback ${feedback.kind}`}>{feedback.text}</p>
+          <p className="snitch-feedback error">{feedback.text}</p>
         )}
 
         {caught && (
