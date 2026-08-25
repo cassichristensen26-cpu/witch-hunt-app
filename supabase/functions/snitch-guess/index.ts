@@ -83,55 +83,37 @@ Deno.serve(async (req) => {
     .eq('user_id', user.id).eq('team_id', team_id).maybeSingle()
   if (!session) return err('Not authorized for this team', 403)
 
-  // Already caught? Game over for this team.
-  const { data: existing } = await service
-    .from('snitch_games').select('guesses, caught').eq('team_id', team_id).maybeSingle()
-  if (existing?.caught) {
-    return json({ caught: true, already: true, guesses: existing.guesses, reward: REWARD })
-  }
-
-  // Increment the team's shared guess counter (start the game on first guess).
-  let guesses: number
-  if (existing) {
-    const { data: upd } = await service.from('snitch_games')
-      .update({ guesses: existing.guesses + 1 })
-      .eq('team_id', team_id).eq('caught', false)
-      .select('guesses').single()
-    guesses = upd?.guesses ?? existing.guesses + 1
-  } else {
-    const { data: ins } = await service.from('snitch_games')
-      .insert({ team_id, guesses: 1 }).select('guesses').single()
-    guesses = ins?.guesses ?? 1
-  }
-
   // Evaluate using the CLICK timestamp the client captured — NOT the current
   // time — so confirming after the 3-second window still uses the click moment.
   const correctSquare = MAPPING[slotForTs(click_ts)]
-  const caught = square === correctSquare
 
-  if (caught) {
-    await service.from('snitch_games')
-      .update({ caught: true, caught_at: new Date().toISOString() })
-      .eq('team_id', team_id)
-    return json({ caught: true, guesses, square: correctSquare, reward: REWARD })
-  }
+  // Counting, de-duplication, the catch and the penalty all happen inside one
+  // locked transaction. Six teammates share a guess budget, so a
+  // read-modify-write here would quietly lose guesses when taps interleave.
+  const { data, error } = await service.rpc('claim_snitch_guess', {
+    p_team_id: team_id,
+    p_square: square,
+    // Same square in the same 3-second bucket == the same guess. The snitch
+    // has already moved on by the next bucket, so a later repeat is genuine.
+    p_slot_bucket: Math.floor(click_ts / 3000),
+    p_correct_square: correctSquare,
+    p_free: FREE_GUESSES,
+    p_penalty_minutes: PENALTY_MINUTES,
+    p_reward: REWARD,
+  })
 
-  // Miss. Every guess beyond the free allotment costs the team 1 minute.
-  let penalty_applied = false
-  if (guesses > FREE_GUESSES) {
-    await service.from('adjustments').insert({
-      team_id, type: 'time_penalty', amount: PENALTY_MINUTES,
-      reason: `Snitch: +${PENALTY_MINUTES} min penalty (guess ${guesses})`,
-    })
-    await service.from('snitch_games')
-      .update({ penalty_guesses: guesses - FREE_GUESSES }).eq('team_id', team_id)
-    penalty_applied = true
-  }
+  if (error) return err(error.message, 500)
+
+  const row = Array.isArray(data) ? data[0] : data
+  if (!row) return err('Guess could not be recorded', 500)
 
   return json({
-    caught: false,
-    guesses,
-    penalty_applied,
-    free_remaining: Math.max(0, FREE_GUESSES - guesses),
+    caught: row.r_caught,
+    guesses: row.r_guesses,
+    square: row.r_caught_square,
+    reward: row.r_reward,
+    duplicate: row.r_duplicate,
+    penalty_applied: row.r_penalty_applied,
+    free_remaining: Math.max(0, FREE_GUESSES - row.r_guesses),
   })
 })

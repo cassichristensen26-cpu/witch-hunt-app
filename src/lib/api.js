@@ -111,15 +111,31 @@ export async function snitchGuess(teamId, square, clickTs) {
   return data
 }
 
-// Read this team's current snitch state (guesses used / caught). Null if not started.
+// Read this team's current snitch state. Null if nobody has guessed yet.
+// Needs the anon session, or RLS hides the row and every phone reads zero.
 export async function getSnitchState(teamId) {
+  await ensureAnonSession()
   const { data, error } = await supabase
     .from('snitch_games')
-    .select('guesses, penalty_guesses, caught')
+    .select('guesses, penalty_guesses, caught, caught_square, reward')
     .eq('team_id', teamId)
     .maybeSingle()
   if (error) throw error
   return data
+}
+
+// Live view of the team's shared snitch row, so a guess made on one phone
+// lands on all six. Returns an unsubscribe function.
+export function subscribeSnitchState(teamId, onChange) {
+  const channel = supabase
+    .channel(`snitch-${teamId}`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'snitch_games', filter: `team_id=eq.${teamId}` },
+      payload => onChange(payload.new)
+    )
+    .subscribe()
+  return () => supabase.removeChannel(channel)
 }
 
 export const modLogin = (password) => edge('moderator-auth', { password })

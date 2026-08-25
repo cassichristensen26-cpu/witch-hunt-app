@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, Navigate } from 'react-router-dom'
-import { joinTeam, snitchGuess, getSnitchState } from '../lib/api'
+import { joinTeam, snitchGuess, getSnitchState, subscribeSnitchState } from '../lib/api'
 import '../styles/hp-scroll.css'
 import '../styles/snitch.css'
 
@@ -70,26 +70,41 @@ export default function Snitch() {
     return () => clearInterval(t)
   }, [])
 
-  // Load current state for the logged-in team
+  // Apply a snitch_games row from any source — first load, this phone's own
+  // guess, or a teammate's guess arriving over realtime.
+  const applyState = useCallback(state => {
+    if (!state) return
+    if (typeof state.guesses === 'number') {
+      // Only ever climbs. Realtime can deliver out of order, and a duplicate
+      // guess returns the unchanged count — neither should walk the total back.
+      setGuesses(g => Math.max(g, state.guesses))
+    }
+    if (state.caught) {
+      setCaught(true)
+      // caught_square/reward come from the row, so all six phones can show the
+      // result — not just whichever one happened to tap Confirm.
+      const remembered = readCaught()
+      const square = state.caught_square
+        ?? (remembered?.teamId === team?.teamId ? remembered.square : null)
+      setCaughtSquare(square ?? null)
+      setReward(state.reward ?? remembered?.reward ?? null)
+      setPending(null) // a teammate ended it; drop any open confirm dialog
+    }
+  }, [team?.teamId])
+
+  // Load current state for the logged-in team, then keep it live
   useEffect(() => {
     let cancelled = false
+    if (!team?.teamId) {
+      setLoading(false)
+      return
+    }
+
     async function load() {
-      if (!team?.teamId) {
-        setLoading(false)
-        return
-      }
       try {
         const state = await getSnitchState(team.teamId)
         if (cancelled) return
-        setGuesses(state?.guesses ?? 0)
-        setCaught(!!state?.caught)
-        if (state?.caught) {
-          const remembered = readCaught()
-          if (remembered?.teamId === team.teamId) {
-            setCaughtSquare(remembered.square ?? null)
-            setReward(remembered.reward ?? null)
-          }
-        }
+        applyState(state)
       } catch {
         // Stale/mismatched session — fall back to code login
         if (!cancelled) {
@@ -101,8 +116,13 @@ export default function Snitch() {
       }
     }
     load()
-    return () => { cancelled = true }
-  }, [team?.teamId])
+
+    const unsubscribe = subscribeSnitchState(team.teamId, row => {
+      if (!cancelled) applyState(row)
+    })
+
+    return () => { cancelled = true; unsubscribe() }
+  }, [team?.teamId, applyState])
 
   // Wrong or missing key -> pretend the page doesn't exist
   if (key !== SNITCH_KEY) return <Navigate to="/" replace />
@@ -165,16 +185,20 @@ export default function Snitch() {
       const res = await snitchGuess(team.teamId, pending.square, pending.ts)
       // No hit/miss commentary — the guess counter above the board already
       // says where the team stands. `feedback` now only carries failures.
-      setGuesses(res.guesses ?? guesses + 1)
+      //
+      // The server's count is authoritative: it already includes teammates'
+      // guesses, and on a duplicate it is deliberately unchanged. Never
+      // increment locally, or six phones would each add their own.
+      applyState({
+        guesses: res.guesses,
+        caught: res.caught,
+        caught_square: res.square,
+        reward: res.reward,
+      })
       if (res.caught) {
-        // Stay on the board — the snitch lands in the square they picked.
-        const square = res.square ?? pending.square
-        setCaught(true)
-        setCaughtSquare(square)
-        setReward(res.reward ?? null)
         try {
           localStorage.setItem(CAUGHT_KEY, JSON.stringify({
-            teamId: team.teamId, square, reward: res.reward ?? null,
+            teamId: team.teamId, square: res.square ?? pending.square, reward: res.reward ?? null,
           }))
         } catch { /* private mode — the banner still shows this session */ }
       }

@@ -171,7 +171,17 @@ The slot→square map is **fixed for all games, not per-game random**, so one an
 ~/.local/node/bin/supabase secrets set SNITCH_REWARD='the old mill' --project-ref lzykscaespouwxokvewy
 ```
 
-The caught square is remembered in `localStorage` under `wh_snitch_caught`, since the DB records only *that* a team caught it, not where. Clearing storage means a reload shows the banner without the snitch on a square.
+### Six phones per team
+
+A whole team plays the same board at once, sharing one guess budget, so every write goes through the `claim_snitch_guess` Postgres function under `pg_advisory_xact_lock('snitch:'||team_id)` — the same pattern as `claim_hint`. The edge function passes in the correct square for the clicked moment (the map never touches the DB) and the function does the counting, de-duplication, catch and penalty in one locked transaction. **Never** go back to read-modify-write on `snitch_games.guesses`: with six phones it silently loses guesses and double-charges penalties.
+
+De-duplication is the `UNIQUE (team_id, square, slot_bucket)` on `snitch_guesses`, where `slot_bucket = floor(click_ts_ms / 3000)`. Two phones naming the same square in the same 3-second slot are necessarily the same guess with the same outcome, so it counts once. A different square, or the same square in a later slot, always counts — nothing is ever dropped for merely being *near* another guess in time.
+
+`snitch_games` is in the `supabase_realtime` publication; `subscribeSnitchState` keeps all six phones on the shared count, closes a stale confirm dialog when a teammate catches it, and only ever lets the count climb (realtime can deliver out of order). `caught_square` and `reward` live on the row so every phone can render the result, not just the one that tapped Confirm — they are written only at the moment of the catch, so nothing leaks early.
+
+**Known gap**: `click_ts` is the *phone's* clock. Six phones with skewed clocks land in different slots for the same real moment, so a guess may be judged against a square the team didn't see. Not currently corrected.
+
+The caught square is also remembered in `localStorage` under `wh_snitch_caught` as a fallback for rows written before `caught_square` existed.
 
 ### Snitch page art
 
