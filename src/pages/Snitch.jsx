@@ -307,6 +307,15 @@ export default function Snitch() {
           </ul>
         )}
 
+        {/* Nudges earned by wrong guesses — they stack, and stay put on reload
+            since `guesses` is read back from the server. */}
+        {!caught && guesses >= 1 && (
+          <div className="snitch-asides">
+            <p>While you're at it, you can also check the weather forecast.</p>
+            {guesses >= 2 && <p>This is not a logic puzzle.</p>}
+          </div>
+        )}
+
         {feedback && !caught && (
           <p className={`snitch-feedback ${feedback.kind}`}>{feedback.text}</p>
         )}
