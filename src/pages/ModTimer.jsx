@@ -118,22 +118,22 @@ export default function ModTimer() {
 
   return (
     <div className="min-h-screen bg-gray-950 text-white flex flex-col">
-      <div className="flex items-center justify-between px-4 py-3">
+      <div className="relative z-10 flex items-center justify-between px-4 py-3">
         <button
           onClick={() => navigate('/mod/game')}
-          className="text-gray-700 hover:text-gray-500 text-sm transition-colors"
+          className="text-gray-600 hover:text-gray-300 text-sm transition-colors px-3 py-2 -mx-3 -my-2"
         >
           ← Leaderboard
         </button>
         <button
           onClick={toggleFullscreen}
-          className="text-gray-700 hover:text-gray-500 text-sm transition-colors"
+          className="text-gray-600 hover:text-gray-300 text-sm transition-colors px-3 py-2 -mx-3 -my-2"
         >
           {isFullscreen ? 'Exit full screen' : 'Full screen'}
         </button>
       </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center px-4 -mt-8">
+      <div className="flex-1 flex flex-col items-center justify-center px-4">
         {game?.name && (
           <p className="text-gray-600 text-lg sm:text-2xl mb-2 sm:mb-6 text-center">{game.name}</p>
         )}
