@@ -235,6 +235,22 @@ The server still trusts the timestamp the client sends; the 3-guess budget is wh
 
 `public/quidditch.jpg` (pitch background), `public/snitch.png`, `public/banner.png`. The two PNGs were keyed from white-background JPEGs — the originals stay untracked at the repo root, same as `parchment texture.jpg`. The white was removed with a border-seeded flood fill (so light tones *inside* the art stay opaque); there's no ImageMagick or PIL on this machine, so it was done via `sips` → BMP → a hand-rolled PNG writer. The banner's text box insets in `snitch.css` are measured from the artwork (flat panel spans x 12.7%–87.5%, y 31.1%–63.3%) — re-measure if the banner art is ever replaced.
 
+## Running a Real Game (load checklist)
+
+Sizing for the real event: ~20 teams x 6 phones = 120 player devices, plus 2 moderator devices and 1 timer display. Nothing in the code throws under that load; the risks are account limits and silent degradation.
+
+**Check before every game — these are dashboard settings, not code:**
+
+1. **Anonymous sign-in rate limit.** Every device calls `signInAnonymously()` on first load, and Supabase rate-limits this **per IP** (default 30/hour). If players all join over one venue's WiFi they share an IP, and everyone past the limit simply cannot join. Raise it under Authentication → Rate Limits, and prefer having teams join in advance (the session persists in `localStorage`, so it is a one-time cost) or over cellular.
+
+2. **Realtime concurrent connections.** `supabase-js` opens one WebSocket per browser tab. A player with the main app and the snitch board in separate tabs is two connections, so peak is ~240. Free tier caps at 200, Pro at 500. Past the cap, devices silently stop receiving updates — teammates' answers stop syncing, the shared snitch count goes stale, no error anywhere.
+
+**Known amplification, currently fine at this scale**: each `team_answers` change fans out to that team's 6 devices, and every one of them calls `get_team_correct_count`. Starting the game fans one `games` UPDATE out to all 120 subscribers at once.
+
+### Answers retry until confirmed
+
+`Team.jsx` keeps a slot in `pendingRef` until a save is actually acknowledged, retrying on a backoff with the newest value. This exists because the answer trigger allows only 10 changes/slot/60s while six teammates share nine slots and can see each other's edits — the old code dropped a rejected save on the floor while the box still read "saved", so the answer vanished on reload. Attempts are capped at 6; past that the row reads "not saved — retype it" and never claims success. Realtime rows do not overwrite a slot with unsaved local text.
+
 ## GitHub
 
 - **Repo**: https://github.com/cassichristensen26-cpu/witch-hunt-app

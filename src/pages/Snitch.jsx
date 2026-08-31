@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, Navigate } from 'react-router-dom'
 import { joinTeam, snitchGuess, getSnitchState, subscribeSnitchState, getSnitchText } from '../lib/api'
-import { syncClock, serverNow } from '../lib/clock'
+import { syncClock, serverNow, isClockSynced } from '../lib/clock'
 import '../styles/hp-scroll.css'
 import '../styles/snitch.css'
 
@@ -89,6 +89,7 @@ export default function Snitch() {
   const [submitting, setSubmitting] = useState(false)
   const [feedback, setFeedback] = useState(null) // { kind: 'error', text } — failures only
   const [copy, setCopy] = useState(DEFAULT_TEXT)
+  const [clockReady, setClockReady] = useState(isClockSynced())
   const [now, setNow] = useState(serverNow())
 
   // Live clock so teams can feel the 3-second cadence.
@@ -108,7 +109,18 @@ export default function Snitch() {
   // its monotonic clock well behind the wall clock.
   useEffect(() => {
     let cancelled = false
-    const resync = () => { if (!cancelled) syncClock().then(() => { if (!cancelled) setNow(serverNow()) }) }
+    const resync = () => {
+      if (cancelled) return
+      // Resolves whether or not the sync landed. clockReady means "we've
+      // stopped waiting", not "the clock is good" — a board that can never be
+      // tapped because the network is down is worse than one running on the
+      // phone's clock, which is exactly the old behaviour.
+      syncClock().then(() => {
+        if (cancelled) return
+        setNow(serverNow())
+        setClockReady(true)
+      })
+    }
     resync()
     const onVisible = () => { if (document.visibilityState === 'visible') resync() }
     document.addEventListener('visibilitychange', onVisible)
@@ -242,7 +254,7 @@ export default function Snitch() {
   }
 
   function handleCellClick(i) {
-    if (caught || pending || submitting) return
+    if (caught || pending || submitting || !clockReady) return
     setFeedback(null)
     // Stamp on the server's clock, not the phone's. This timestamp is what
     // picks the slot the guess is graded in, and what de-duplicates a
@@ -361,7 +373,7 @@ export default function Snitch() {
                 ? <span>{freeLeft} free left</span>
                 : <span className="costly">each guess now costs 1 min</span>}
             </p>
-            <p className="snitch-clock">{formatClock(now)}</p>
+            <p className="snitch-clock">{clockReady ? formatClock(now) : 'syncing…'}</p>
           </>
         )}
 
@@ -371,7 +383,7 @@ export default function Snitch() {
               key={i}
               className={`snitch-cell${caught && caughtSquare === i ? ' is-caught' : ''}`}
               onClick={() => handleCellClick(i)}
-              disabled={submitting || !!pending || caught}
+              disabled={submitting || !!pending || caught || !clockReady}
               aria-label={caught && caughtSquare === i ? `Snitch caught on ${labelFor(i)}` : `Guess ${labelFor(i)}`}
             >
               <span className="snitch-cell-label">{labelFor(i)}</span>

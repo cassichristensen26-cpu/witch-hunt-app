@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { upsertAnswer, ensureAnonSession, requestHint, joinTeam } from '../lib/api'
+import { syncClock, serverNow } from '../lib/clock'
 import { formatCountdown } from '../lib/scoring'
 import '../styles/hp-scroll.css'
 
@@ -16,6 +17,8 @@ export default function Team() {
   const [keywords, setKeywords] = useState([])
   const [saving, setSaving] = useState({})
   const [saveErrors, setSaveErrors] = useState({})
+  const pendingRef = useRef({})   // slot -> value still awaiting a confirmed save
+  const retryRef = useRef({})     // slot -> scheduled retry timer
   const [done, setDone] = useState(false)
   const [disqualified, setDisqualified] = useState(false)
   const [correctCount, setCorrectCount] = useState(0)
@@ -69,7 +72,11 @@ export default function Team() {
     init()
     supabase.from('rules').select('content').eq('id', 1).single()
       .then(({ data }) => { if (data) setRules(data.content) })
-    return () => cleanup()
+    return () => {
+      cleanup()
+      for (const t of Object.values(retryRef.current)) clearTimeout(t)
+      for (const t of Object.values(debounceRef.current)) clearTimeout(t)
+    }
   }, [])
 
   useEffect(() => {
@@ -85,12 +92,27 @@ export default function Team() {
     }
   }, [hintRequests])
 
+  // Anchor to the server clock once, and again when the page comes back —
+  // phones sleep for long stretches during a city-wide game.
+  useEffect(() => {
+    let cancelled = false
+    const resync = () => { if (!cancelled) syncClock() }
+    resync()
+    const onVisible = () => { if (document.visibilityState === 'visible') resync() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => { cancelled = true; document.removeEventListener('visibilitychange', onVisible) }
+  }, [])
+
   useEffect(() => {
     if (!game?.start_time || !game?.duration_minutes) return
     const endTime = new Date(game.start_time).getTime() + game.duration_minutes * 60000
     const ceremonyTime = endTime + 10 * 60000
+    // serverNow(), not Date.now(). endTime derives from the server's
+    // start_time, so a phone with a skewed clock shows a countdown that
+    // disagrees with the one the game is actually run on — and this is the
+    // clock players use to decide when to head back.
     const tick = () => {
-      const now = Date.now()
+      const now = serverNow()
       setTimeLeftMs(endTime - now)
       setCeremonyMs(Math.max(0, ceremonyTime - now))
     }
@@ -140,8 +162,12 @@ export default function Team() {
       .channel(`team-${teamId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'team_answers', filter: `team_id=eq.${teamId}` },
         ({ new: row }) => {
-          if (row && !debounceRef.current[row.keyword_slot]) {
-            setAnswers(prev => ({ ...prev, [row.keyword_slot]: row }))
+          // Skip if this slot has local text not yet written — mid-debounce or
+          // mid-retry. Overwriting what someone is looking at is worse than
+          // being briefly out of step, and our value lands shortly anyway.
+          const slot = row?.keyword_slot
+          if (row && !debounceRef.current[slot] && pendingRef.current[slot] === undefined) {
+            setAnswers(prev => ({ ...prev, [slot]: row }))
           }
           refreshCorrectCount()
         })
@@ -160,24 +186,61 @@ export default function Team() {
     return () => supabase.removeChannel(channel)
   }
 
+  // A rejected save used to be dropped on the floor: the box kept showing the
+  // typed text, "Slow down!" flashed for three seconds, and then the row said
+  // "saved" while the server had nothing. The answer was gone on reload.
+  //
+  // This matters far more with six teammates than it did with one. The answer
+  // trigger allows 10 changes per slot per 60s, teammates see each other's
+  // edits live, and correcting each other on one slot burns that budget fast.
+  //
+  // So a slot stays in pendingRef until a save is actually confirmed, and we
+  // keep retrying with the newest value. Attempts are capped so a permanently
+  // rejected write (a team marked done mid-keystroke) can't loop forever.
+  const RETRY_BACKOFF_MS = [4000, 8000, 15000, 30000]
+  const MAX_SAVE_ATTEMPTS = 6
+
+  async function flushSlot(slot, attempt = 0) {
+    const value = pendingRef.current[slot]
+    if (value === undefined) return
+
+    setSaving(prev => ({ ...prev, [slot]: true }))
+    try {
+      await upsertAnswer(teamData.teamId, slot, value)
+      // Only settle if nothing newer was typed while this was in flight.
+      if (pendingRef.current[slot] === value) {
+        delete pendingRef.current[slot]
+        setSaveErrors(prev => ({ ...prev, [slot]: null }))
+      }
+    } catch (e) {
+      const rateLimited = e.message?.includes('Too many changes')
+      if (attempt + 1 >= MAX_SAVE_ATTEMPTS) {
+        // Never claim saved. Tell them to do the one thing that works.
+        setSaveErrors(prev => ({ ...prev, [slot]: 'not saved — retype it' }))
+        console.error('Save failed permanently:', e)
+        return
+      }
+      setSaveErrors(prev => ({ ...prev, [slot]: rateLimited ? 'too fast — retrying' : 'not saved — retrying' }))
+      clearTimeout(retryRef.current[slot])
+      retryRef.current[slot] = setTimeout(
+        () => flushSlot(slot, attempt + 1),
+        RETRY_BACKOFF_MS[Math.min(attempt, RETRY_BACKOFF_MS.length - 1)]
+      )
+    } finally {
+      setSaving(prev => ({ ...prev, [slot]: false }))
+    }
+  }
+
   function handleChange(slot, value) {
     setAnswers(prev => ({ ...prev, [slot]: { ...prev[slot], submitted_answer: value } }))
+    pendingRef.current[slot] = value
+    // A fresh keystroke supersedes any scheduled retry — it would only write a
+    // stale value.
+    clearTimeout(retryRef.current[slot])
     clearTimeout(debounceRef.current[slot])
-    debounceRef.current[slot] = setTimeout(async () => {
-      setSaving(prev => ({ ...prev, [slot]: true }))
-      try {
-        await upsertAnswer(teamData.teamId, slot, value)
-      } catch (e) {
-        if (e.message?.includes('Too many changes')) {
-          setSaveErrors(prev => ({ ...prev, [slot]: 'Slow down!' }))
-          setTimeout(() => setSaveErrors(prev => ({ ...prev, [slot]: null })), 3000)
-        } else {
-          console.error('Save failed:', e)
-        }
-      } finally {
-        setSaving(prev => ({ ...prev, [slot]: false }))
-        debounceRef.current[slot] = null
-      }
+    debounceRef.current[slot] = setTimeout(() => {
+      debounceRef.current[slot] = null
+      flushSlot(slot)
     }, 800)
   }
 
