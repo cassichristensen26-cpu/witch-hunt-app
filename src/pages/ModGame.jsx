@@ -141,6 +141,9 @@ export default function ModGame() {
                 {starting ? 'Starting…' : '▶ Start Game'}
               </button>
             )}
+            <button onClick={() => navigate('/mod/timer')} className="text-gray-700 hover:text-gray-500 text-xs px-2 py-2">
+              Timer
+            </button>
             <button onClick={() => navigate('/mod/rules')} className="text-gray-700 hover:text-gray-500 text-xs px-2 py-2">
               Rules
             </button>
