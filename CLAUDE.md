@@ -27,6 +27,7 @@ src/
     ModTeam.jsx            # Per-team detail + accept/reject answers
     ModRules.jsx           # Edit global rules
     ModSnitch.jsx          # Edit Catch the Snitch copy (fixtures, nudges, banner)
+    ModTimer.jsx           # Full-screen countdown for projecting
 supabase/
   functions/               # Deno edge functions (one folder each)
   migrations/
@@ -111,6 +112,15 @@ SUPABASE_ACCESS_TOKEN=$(grep SUPABASE_PAT /private/tmp/wh_scripts/.env | cut -d=
 If `wh_scripts/.env` is missing, `SUPABASE_ACCESS_TOKEN` ends up empty and the CLI quietly falls back to a
 stored `supabase login` — which is why a deploy can still succeed while printing a `No such file or directory`
 warning. That fallback works for deploys; it does **not** cover the Management API script below.
+
+## Deploying the Frontend
+
+**The frontend and the edge functions deploy by different routes, and it is easy to ship one without the other.**
+
+- Edge functions: the `supabase functions deploy` command above, run from here. Immediate.
+- Frontend: hosted on **Vercel** (`vercel.json`), built from GitHub. It ships when you `git push origin main` — there is no Vercel CLI or `.vercel` link in this repo, so it cannot be deployed from here directly.
+
+So a change touching both (most snitch work does) is only half-live until the push lands *and* Vercel finishes building. Symptoms of the gap: a new moderator tab that doesn't appear, or client-side behaviour that ignores a function that is demonstrably deployed and answering. Check the Vercel dashboard for a **Ready** deployment on the expected commit before concluding the code is wrong.
 
 ## Applying SQL to Live DB
 
