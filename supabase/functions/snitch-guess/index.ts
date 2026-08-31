@@ -33,17 +33,18 @@ function loadMapping(): number[] | null {
 
 const MAPPING = loadMapping()
 
-// Legacy fallback for where the team goes once they catch it. The banner
-// sentence now lives in the snitch_text table so the moderator can edit it
-// without a redeploy; this secret is only consulted when that row is empty or
-// the table hasn't been created yet. It holds the LOCATION only ("the old
-// mill"), so it still gets wrapped in the original phrasing below.
-//   supabase secrets set SNITCH_REWARD='the old mill' --project-ref <ref>
+// Legacy fallback for where the team goes once they catch it, kept only for
+// deployments that set it before the moderator tab existed. Prefer /mod/snitch.
+//   supabase secrets set SNITCH_REWARD='...' --project-ref <ref>
 const REWARD_SECRET = Deno.env.get('SNITCH_REWARD')?.trim() || null
 
-// The full sentence the banner shows on a catch, or null to let the page use
-// its own default. DB first, then the old secret, so existing deployments keep
-// working untouched until someone edits the text in the moderator tab.
+// The banner sentence, returned verbatim.
+//
+// NOTHING here wraps the text in surrounding phrasing. The moderator types the
+// whole sentence and that is exactly what the ribbon shows — an earlier version
+// interpolated the value into "Go to ___ to find the next ingredient", which
+// silently mangled the sentence once the field became a full sentence rather
+// than a bare location. Don't reintroduce a wrapper here or in Snitch.jsx.
 //
 // Read per request rather than cached: a moderator editing the banner mid-game
 // should affect the very next catch, and this is one indexed single-row read.
@@ -51,8 +52,7 @@ async function resolveBanner(service: ReturnType<typeof createClient>): Promise<
   const { data } = await service
     .from('snitch_text').select('banner').eq('id', 1).maybeSingle()
   const fromDb = typeof data?.banner === 'string' ? data.banner.trim() : ''
-  if (fromDb) return fromDb
-  return REWARD_SECRET ? `Go to ${REWARD_SECRET} to find the next ingredient` : null
+  return fromDb || REWARD_SECRET || null
 }
 
 // Which 3-second slot (0..19) a given epoch-ms timestamp falls in, within its minute.

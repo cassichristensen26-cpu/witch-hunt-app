@@ -183,7 +183,11 @@ The fixtures list, both nudges, and the banner sentence are moderator-editable a
 
 `banner` is the reward, so it is column-REVOKEd from `anon`/`authenticated` exactly like `keywords.correct_answer`. Teams read `fixtures`/`nudge_1`/`nudge_2` with a plain `.select()`; **never add `banner` to that select** — it 403s the whole query. The moderator editor reads it back through `moderator-get-snitch-text` (service role) for the same reason.
 
-Resolution order for the banner, in `snitch-guess`'s `resolveBanner()`: the `snitch_text.banner` row, then the legacy `SNITCH_REWARD` secret (location only, wrapped in the old "Go to ___ to find the next ingredient" phrasing), then null — at which point the page falls back to "Find your moderator to collect the next ingredient". So a deployment that never applies the migration keeps working exactly as it did.
+Resolution order for the banner, in `snitch-guess`'s `resolveBanner()`: the `snitch_text.banner` row, then the legacy `SNITCH_REWARD` secret, then null — at which point the page falls back to "Find your moderator to collect the next ingredient".
+
+**The banner text is never wrapped.** Whatever the moderator types is what the ribbon shows, verbatim. An earlier version interpolated the value into "Go to ___ to find the next ingredient", which was fine while the field held a bare location and started mangling sentences the moment it became a full sentence. Don't reintroduce a wrapper in `resolveBanner()` or in `Snitch.jsx`'s `bannerText`.
+
+**Testing gotcha**: `snitch_games.reward` is stamped onto the team's row *at the moment of the catch*, and mirrored into `localStorage` under `wh_snitch_caught`. Editing the banner afterwards does not change what an already-caught team sees. To re-test a banner change you need a team that hasn't caught it yet, or to clear that team's `snitch_games` row and the browser key.
 
 `Snitch.jsx` holds the same defaults in `DEFAULT_TEXT` for the case where the row doesn't exist. A row that *does* exist is used verbatim, blanks included — clearing a nudge in the moderator tab really does remove it.
 
