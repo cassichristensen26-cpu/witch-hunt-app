@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, Navigate } from 'react-router-dom'
 import { joinTeam, snitchGuess, getSnitchState, subscribeSnitchState } from '../lib/api'
+import { syncClock, serverNow } from '../lib/clock'
 import '../styles/hp-scroll.css'
 import '../styles/snitch.css'
 
@@ -62,12 +63,33 @@ export default function Snitch() {
   const [pending, setPending] = useState(null) // { square, label, ts }
   const [submitting, setSubmitting] = useState(false)
   const [feedback, setFeedback] = useState(null) // { kind: 'error', text } — failures only
-  const [now, setNow] = useState(Date.now())
+  const [now, setNow] = useState(serverNow())
 
-  // Live clock so teams can feel the 3-second cadence
+  // Live clock so teams can feel the 3-second cadence.
+  //
+  // Shows the SERVER's time, not the phone's — this is the clock teams time
+  // their taps against, and the server is what grades them, so the two have to
+  // be the same clock. On a phone with a badly set clock this will disagree
+  // with the lock screen; that mismatch is the honest signal, and it beats
+  // silently losing guesses to it.
   useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 250)
+    const t = setInterval(() => setNow(serverNow()), 250)
     return () => clearInterval(t)
+  }, [])
+
+  // Anchor to the server clock on load, and again whenever the page comes back
+  // to the foreground — a phone that slept through a suspend can resume with
+  // its monotonic clock well behind the wall clock.
+  useEffect(() => {
+    let cancelled = false
+    const resync = () => { if (!cancelled) syncClock().then(() => { if (!cancelled) setNow(serverNow()) }) }
+    resync()
+    const onVisible = () => { if (document.visibilityState === 'visible') resync() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      cancelled = true
+      document.removeEventListener('visibilitychange', onVisible)
+    }
   }, [])
 
   // Apply a snitch_games row from any source — first load, this phone's own
@@ -175,7 +197,10 @@ export default function Snitch() {
   function handleCellClick(i) {
     if (caught || pending || submitting) return
     setFeedback(null)
-    setPending({ square: i, label: labelFor(i), ts: Date.now() })
+    // Stamp on the server's clock, not the phone's. This timestamp is what
+    // picks the slot the guess is graded in, and what de-duplicates a
+    // teammate's simultaneous tap on the same square.
+    setPending({ square: i, label: labelFor(i), ts: serverNow() })
   }
 
   async function confirmGuess() {

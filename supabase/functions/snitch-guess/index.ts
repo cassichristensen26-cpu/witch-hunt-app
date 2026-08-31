@@ -85,6 +85,11 @@ Deno.serve(async (req) => {
 
   // Evaluate using the CLICK timestamp the client captured — NOT the current
   // time — so confirming after the 3-second window still uses the click moment.
+  //
+  // click_ts is on THIS server's clock: the board syncs to snitch-time and
+  // stamps taps from that, so a phone with a skewed clock is no longer graded
+  // against a square it never showed. Residual error is the round trip's
+  // asymmetry, tens of ms against a 3000ms slot.
   const correctSquare = MAPPING[slotForTs(click_ts)]
 
   // Counting, de-duplication, the catch and the penalty all happen inside one
@@ -95,6 +100,8 @@ Deno.serve(async (req) => {
     p_square: square,
     // Same square in the same 3-second bucket == the same guess. The snitch
     // has already moved on by the next bucket, so a later repeat is genuine.
+    // Only sound because click_ts is server-clock: on phone clocks, teammates
+    // tapping together landed in different buckets and were charged twice.
     p_slot_bucket: Math.floor(click_ts / 3000),
     p_correct_square: correctSquare,
     p_free: FREE_GUESSES,

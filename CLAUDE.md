@@ -38,6 +38,7 @@ supabase/
 - **URL**: `https://lzykscaespouwxokvewy.supabase.co`
 - **Env file**: `.env` (gitignored) — contains `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
 - **Management API scripts**: `/private/tmp/wh_scripts/run.js` + `.env` (has PAT and project ref)
+  - ⚠️ **This directory lives in `/tmp` and gets wiped.** It was already gone as of 2026-08-30. Anything below that reads `/private/tmp/wh_scripts/.env` — the deploy command's token line, the SQL helper — silently resolves to an empty string when it's missing. Recreate it with the PAT before running SQL, or use the dashboard SQL editor instead.
 
 ## Database Schema
 
@@ -94,6 +95,7 @@ All moderator functions validate `x-mod-token` via `validateModToken` in `_share
 | `moderator-save-rules` | UPDATE global rules row |
 | `request-hint` | Atomic hint claim via `claim_hint` RPC (advisory lock prevents race conditions) |
 | `snitch-guess` | Judge a Catch the Snitch guess; writes 1-min penalties past the 3 free guesses |
+| `snitch-time` | Return the server's epoch-ms clock, so every snitch board grades taps on the same clock (public, no side effects) |
 
 ## Deploying Edge Functions
 
@@ -101,6 +103,10 @@ All moderator functions validate `x-mod-token` via `validateModToken` in `_share
 SUPABASE_ACCESS_TOKEN=$(grep SUPABASE_PAT /private/tmp/wh_scripts/.env | cut -d= -f2) \
   ~/.local/node/bin/supabase functions deploy <function-name> --project-ref lzykscaespouwxokvewy
 ```
+
+If `wh_scripts/.env` is missing, `SUPABASE_ACCESS_TOKEN` ends up empty and the CLI quietly falls back to a
+stored `supabase login` — which is why a deploy can still succeed while printing a `No such file or directory`
+warning. That fallback works for deploys; it does **not** cover the Management API script below.
 
 ## Applying SQL to Live DB
 
@@ -179,9 +185,20 @@ De-duplication is the `UNIQUE (team_id, square, slot_bucket)` on `snitch_guesses
 
 `snitch_games` is in the `supabase_realtime` publication; `subscribeSnitchState` keeps all six phones on the shared count, closes a stale confirm dialog when a teammate catches it, and only ever lets the count climb (realtime can deliver out of order). `caught_square` and `reward` live on the row so every phone can render the result, not just the one that tapped Confirm — they are written only at the moment of the catch, so nothing leaks early.
 
-**Known gap**: `click_ts` is the *phone's* clock. Six phones with skewed clocks land in different slots for the same real moment, so a guess may be judged against a square the team didn't see. Not currently corrected.
-
 The caught square is also remembered in `localStorage` under `wh_snitch_caught` as a fallback for rows written before `caught_square` existed.
+
+### The clock (why `snitch-time` exists)
+
+`click_ts` used to be the *phone's* clock, and that broke the game twice over. Slots are only 3 seconds, so a phone a few seconds off was a whole slot out and got graded against a square its own board never showed — the team burned a guess, and past the third one a real 1-minute leaderboard penalty, for a correctly timed tap. It also defeated the six-phone de-duplication: the `slot_bucket` key is `floor(click_ts / 3000)`, so two teammates tapping the same square at the same real moment with skewed clocks landed in different buckets and were counted (and penalized) twice.
+
+Now nothing in the snitch path reads `Date.now()`. `src/lib/clock.js` samples `snitch-time` three times on page load, keeps the sample with the lowest round trip, corrects by RTT/2, and anchors the result to `performance.now()` — a monotonic counter no NTP correction or manual clock change can move. `serverNow()` drives both the clock shown on the board and the timestamp stamped on a tap, so what a player reads is what they're graded against. It re-syncs on `visibilitychange` (a phone can resume from suspend well behind the wall clock).
+
+Residual error is the round trip's *asymmetry*, not the skew: symmetric trips land at 0ms, and even a lopsided 900ms-up/100ms-down trip is ~400ms against a 3000ms slot — and only matters for a tap within 400ms of a slot boundary.
+
+`serverNow()` falls back to `Date.now()` when the sync never succeeded, which is exactly the old skewed behavior — better than a board that won't grade a tap at all. **Anyone self-hosting must deploy `snitch-time`**, or every phone silently drops back to that fallback.
+
+The server still trusts the timestamp the client sends; the 3-guess budget is what caps abuse, as before.
+
 
 ### Snitch page art
 

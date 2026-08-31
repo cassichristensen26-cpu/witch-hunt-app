@@ -90,9 +90,14 @@ export async function upsertAnswer(teamId, slot, answer) {
 
 // ---- Catch the Snitch mini-game (fully separate from the main game) ----
 
+// The server's current epoch-ms. Public and side-effect free; see clock.js for
+// why the snitch board can't just use the phone's own clock.
+export const getServerTime = () => edge('snitch-time', {})
+
 // Submit a guess. Uses the team's own JWT (like requestHint) so the edge
-// function can confirm the user belongs to the team. click_ts is the epoch-ms
-// moment the square was tapped — the server evaluates against THAT time.
+// function can confirm the user belongs to the team. click_ts is the moment the
+// square was tapped, in epoch ms *on the server's clock* (see clock.js) — the
+// server evaluates against THAT time, not the time the guess arrives.
 export async function snitchGuess(teamId, square, clickTs) {
   await ensureAnonSession()
   const { data: { session } } = await supabase.auth.getSession()
