@@ -144,6 +144,9 @@ export default function ModGame() {
             <button onClick={() => navigate('/mod/rules')} className="text-gray-700 hover:text-gray-500 text-xs px-2 py-2">
               Rules
             </button>
+            <button onClick={() => navigate('/mod/snitch')} className="text-gray-700 hover:text-gray-500 text-xs px-2 py-2">
+              Snitch text
+            </button>
             <button onClick={() => navigate('/mod/setup')} className="text-gray-700 hover:text-gray-500 text-xs px-2 py-2">
               New game
             </button>

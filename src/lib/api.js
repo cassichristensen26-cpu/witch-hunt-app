@@ -129,6 +129,19 @@ export async function getSnitchState(teamId) {
   return data
 }
 
+// The moderator-editable snitch copy teams can see. `banner` is deliberately
+// absent — the column is REVOKEd from anon/authenticated because it names the
+// reward, and selecting it here would 403 the whole query.
+export async function getSnitchText() {
+  const { data, error } = await supabase
+    .from('snitch_text')
+    .select('fixtures, nudge_1, nudge_2')
+    .eq('id', 1)
+    .maybeSingle()
+  if (error) throw error
+  return data
+}
+
 // Live view of the team's shared snitch row, so a guess made on one phone
 // lands on all six. Returns an unsubscribe function.
 export function subscribeSnitchState(teamId, onChange) {
@@ -151,6 +164,8 @@ export const modAddAdjustment = (token, payload) => edge('moderator-add-adjustme
 export const modDeleteAdjustment = (token, adjId) => edge('moderator-delete-adjustment', { adjustment_id: adjId }, token)
 export const modOverrideAnswer = (token, teamId, slot, isCorrect) =>
   edge('moderator-override-answer', { team_id: teamId, keyword_slot: slot, is_correct: isCorrect }, token)
+export const modGetSnitchText = (token) => edge('moderator-get-snitch-text', {}, token)
+export const modSaveSnitchText = (token, text) => edge('moderator-save-snitch-text', text, token)
 export const modGetGame = (token, gameId) => edgeGet('moderator-get-game', { game_id: gameId }, token)
 export const modAutoClose = (token, gameId) => edge('moderator-auto-close', { game_id: gameId }, token)
 export const modGetTeam = (token, teamId) => edgeGet('moderator-get-team', { team_id: teamId }, token)

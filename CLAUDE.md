@@ -26,6 +26,7 @@ src/
     ModGame.jsx            # Live leaderboard
     ModTeam.jsx            # Per-team detail + accept/reject answers
     ModRules.jsx           # Edit global rules
+    ModSnitch.jsx          # Edit Catch the Snitch copy (fixtures, nudges, banner)
 supabase/
   functions/               # Deno edge functions (one folder each)
   migrations/
@@ -53,12 +54,13 @@ Key tables:
 - `team_finish_events` — history of done/undone toggles
 - `rules` — single row (id=1), global rules text visible to all teams
 - `snitch_games` — one row per team: guess count, penalty count, caught flag
+- `snitch_text` — single row (id=1), moderator-editable snitch copy: `fixtures`, `nudge_1`, `nudge_2`, `banner`
 
 ## Column-Level Security (team_answers)
 
 Teams cannot see: `is_correct`, `moderator_override`, `change_count`, `change_window_start`. Applied via REVOKE/GRANT, not RLS. Moderator edge functions use service role key which bypasses this.
 
-**Implemented via**: `REVOKE SELECT ON team_answers FROM anon, authenticated;` then `GRANT SELECT (id, team_id, keyword_slot, submitted_answer, updated_at) ...`. INSERT/UPDATE table-level grants are left intact so the PostgREST upsert (which SETs the conflict-key columns) keeps working. Same pattern hides `keywords.correct_answer` and `keywords.hint`. **Do not** apply column REVOKE/GRANT to the `games` table — the Team page's `.select()` and Realtime subscription break if a listed column becomes unreadable (this killed the timer once).
+**Implemented via**: `REVOKE SELECT ON team_answers FROM anon, authenticated;` then `GRANT SELECT (id, team_id, keyword_slot, submitted_answer, updated_at) ...`. INSERT/UPDATE table-level grants are left intact so the PostgREST upsert (which SETs the conflict-key columns) keeps working. Same pattern hides `keywords.correct_answer` and `keywords.hint`, and `snitch_text.banner` (which names the reward location). **Do not** apply column REVOKE/GRANT to the `games` table — the Team page's `.select()` and Realtime subscription break if a listed column becomes unreadable (this killed the timer once).
 
 ## Write Lock After Done/DQ (team_answers RLS)
 
@@ -95,6 +97,8 @@ All moderator functions validate `x-mod-token` via `validateModToken` in `_share
 | `moderator-save-rules` | UPDATE global rules row |
 | `request-hint` | Atomic hint claim via `claim_hint` RPC (advisory lock prevents race conditions) |
 | `snitch-guess` | Judge a Catch the Snitch guess; writes 1-min penalties past the 3 free guesses |
+| `moderator-get-snitch-text` | Read the snitch copy including `banner` (service role — teams have that column REVOKEd) |
+| `moderator-save-snitch-text` | Upsert the snitch copy row |
 | `snitch-time` | Return the server's epoch-ms clock, so every snitch board grades taps on the same clock (public, no side effects) |
 
 ## Deploying Edge Functions
@@ -171,9 +175,22 @@ The slot→square map is **fixed for all games, not per-game random**, so one an
 
 3 free guesses per team; each guess after that inserts a 1-min `time_penalty` adjustment on the real leaderboard. Catching the snitch sets `caught` and ends the mini-game for that team.
 
-**Catching does not navigate away.** The board stays put; `snitch.png` lands in the caught square and the `banner.png` ribbon unfurls below it reading "Go to ___ to find the next ingredient". The blank comes from the `SNITCH_REWARD` secret (the *location only*, e.g. `the old mill`), returned by `snitch-guess` on catch. Unset is fine — the banner then reads "Find your moderator to collect the next ingredient". Set it the same way as the map:
+**Catching does not navigate away.** The board stays put; `snitch.png` lands in the caught square and the `banner.png` ribbon unfurls below it with the banner sentence, returned by `snitch-guess` only at the moment of the catch.
+
+### Editable copy (`snitch_text`)
+
+The fixtures list, both nudges, and the banner sentence are moderator-editable at `/mod/snitch` — a single `snitch_text` row shared across games, same model as `rules`. Editing takes effect immediately; there is nothing to redeploy and nothing to set per game.
+
+`banner` is the reward, so it is column-REVOKEd from `anon`/`authenticated` exactly like `keywords.correct_answer`. Teams read `fixtures`/`nudge_1`/`nudge_2` with a plain `.select()`; **never add `banner` to that select** — it 403s the whole query. The moderator editor reads it back through `moderator-get-snitch-text` (service role) for the same reason.
+
+Resolution order for the banner, in `snitch-guess`'s `resolveBanner()`: the `snitch_text.banner` row, then the legacy `SNITCH_REWARD` secret (location only, wrapped in the old "Go to ___ to find the next ingredient" phrasing), then null — at which point the page falls back to "Find your moderator to collect the next ingredient". So a deployment that never applies the migration keeps working exactly as it did.
+
+`Snitch.jsx` holds the same defaults in `DEFAULT_TEXT` for the case where the row doesn't exist. A row that *does* exist is used verbatim, blanks included — clearing a nudge in the moderator tab really does remove it.
+
+Fixtures are one per line; `renderFixture` italicises everything after the last `=`, so `Holyhead Harpies v Puddlemere United = b3` still renders with the answer emphasised.
 
 ```bash
+# legacy fallback only — prefer the /mod/snitch tab
 ~/.local/node/bin/supabase secrets set SNITCH_REWARD='the old mill' --project-ref lzykscaespouwxokvewy
 ```
 

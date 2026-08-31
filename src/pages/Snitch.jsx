@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, Navigate } from 'react-router-dom'
-import { joinTeam, snitchGuess, getSnitchState, subscribeSnitchState } from '../lib/api'
+import { joinTeam, snitchGuess, getSnitchState, subscribeSnitchState, getSnitchText } from '../lib/api'
 import { syncClock, serverNow } from '../lib/clock'
 import '../styles/hp-scroll.css'
 import '../styles/snitch.css'
@@ -26,6 +26,31 @@ function labelFor(i) {
 
 function formatClock(ts) {
   return new Date(ts).toLocaleTimeString()
+}
+
+// What the page shows if snitch_text has no row yet — the same strings that
+// used to be hardcoded here. Keeps the board working before the migration is
+// applied, and if the moderator blanks a field.
+const DEFAULT_TEXT = {
+  fixtures: [
+    'Holyhead Harpies v Puddlemere United = b3',
+    'Montrose Magpies v Appleby Arrows = d5',
+    'Tutshill Tornados v Ballycastle Bats = c1',
+  ].join('\n'),
+  nudge_1: "While you're at it, you can also check the weather forecast.",
+  nudge_2: 'This is not a logic puzzle.',
+}
+
+// The banner sentence comes from the server on catch (moderator-editable, and
+// hidden from teams until then). This is only the last-resort fallback.
+const DEFAULT_BANNER = 'Find your moderator to collect the next ingredient'
+
+// "Holyhead Harpies v Puddlemere United = b3" -> answer after the last "="
+// italicised, matching how these read before the text became editable.
+function renderFixture(line) {
+  const at = line.lastIndexOf('=')
+  if (at === -1) return line
+  return <>{line.slice(0, at)}= <em>{line.slice(at + 1).trim()}</em></>
 }
 
 function readCaught() {
@@ -63,6 +88,7 @@ export default function Snitch() {
   const [pending, setPending] = useState(null) // { square, label, ts }
   const [submitting, setSubmitting] = useState(false)
   const [feedback, setFeedback] = useState(null) // { kind: 'error', text } — failures only
+  const [copy, setCopy] = useState(DEFAULT_TEXT)
   const [now, setNow] = useState(serverNow())
 
   // Live clock so teams can feel the 3-second cadence.
@@ -90,6 +116,21 @@ export default function Snitch() {
       cancelled = true
       document.removeEventListener('visibilitychange', onVisible)
     }
+  }, [])
+
+  // Moderator-editable copy. A missing row (migration not applied) keeps the
+  // built-in defaults; a row that exists is used verbatim, blanks included —
+  // clearing a nudge in the moderator tab is a real instruction to drop it.
+  useEffect(() => {
+    let cancelled = false
+    getSnitchText()
+      .then(data => { if (data && !cancelled) setCopy({
+        fixtures: data.fixtures ?? '',
+        nudge_1: data.nudge_1 ?? '',
+        nudge_2: data.nudge_2 ?? '',
+      }) })
+      .catch(() => { /* table missing or offline — defaults stand */ })
+    return () => { cancelled = true }
   }, [])
 
   // Apply a snitch_games row from any source — first load, this phone's own
@@ -151,6 +192,12 @@ export default function Snitch() {
 
   const FREE = 3
   const freeLeft = Math.max(0, FREE - guesses)
+
+  // Blank lines dropped so a stray newline in the moderator box doesn't render
+  // an empty bullet.
+  const fixtureLines = copy.fixtures.split('\n').map(l => l.trim()).filter(Boolean)
+  const nudge1 = copy.nudge_1.trim()
+  const nudge2 = copy.nudge_2.trim()
 
   async function handleLogin(e) {
     e.preventDefault()
@@ -287,9 +334,9 @@ export default function Snitch() {
     )
   }
 
-  const bannerText = reward
-    ? `Go to ${reward} to find the next ingredient`
-    : 'Find your moderator to collect the next ingredient'
+  // The server sends the full sentence now (from snitch_text, or the legacy
+  // SNITCH_REWARD secret wrapped in the old phrasing), so it renders verbatim.
+  const bannerText = reward || DEFAULT_BANNER
 
   return (
     <div className="snitch-page">
@@ -335,20 +382,18 @@ export default function Snitch() {
           ))}
         </div>
 
-        {!caught && (
+        {!caught && fixtureLines.length > 0 && (
           <ul className="snitch-fixtures">
-            <li>Holyhead Harpies v Puddlemere United = <em>b3</em></li>
-            <li>Montrose Magpies v Appleby Arrows = <em>d5</em></li>
-            <li>Tutshill Tornados v Ballycastle Bats = <em>c1</em></li>
+            {fixtureLines.map((line, i) => <li key={i}>{renderFixture(line)}</li>)}
           </ul>
         )}
 
         {/* Nudges earned by wrong guesses — they stack, and stay put on reload
             since `guesses` is read back from the server. */}
-        {!caught && guesses >= 1 && (
+        {!caught && guesses >= 1 && (nudge1 || (guesses >= 2 && nudge2)) && (
           <div className="snitch-asides">
-            <p>While you're at it, you can also check the weather forecast.</p>
-            {guesses >= 2 && <p>This is not a logic puzzle.</p>}
+            {nudge1 && <p>{nudge1}</p>}
+            {guesses >= 2 && nudge2 && <p>{nudge2}</p>}
           </div>
         )}
 
