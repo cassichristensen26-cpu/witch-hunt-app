@@ -147,9 +147,15 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.snitch-cell:not(:disabled):hover {
-  background: linear-gradient(160deg, rgba(96, 142, 68, 0.52) 0%, rgba(50, 82, 36, 0.58) 100%);
-  border-color: rgba(255, 255, 255, 0.72);
+/* Mouse only. On a phone, :hover sticks to the last square tapped until the
+   next tap lands somewhere else, so that square sat there glowing — and read
+   to players as a hint about where the snitch was. It never is: the board has
+   no idea where the snitch is; only snitch-guess does. */
+@media (hover: hover) and (pointer: fine) {
+  .snitch-cell:not(:disabled):hover {
+    background: linear-gradient(160deg, rgba(96, 142, 68, 0.52) 0%, rgba(50, 82, 36, 0.58) 100%);
+    border-color: rgba(255, 255, 255, 0.72);
+  }
 }
 
 .snitch-cell:not(:disabled):active { transform: scale(0.96); }
