@@ -12,7 +12,7 @@ const PENALTY_MINUTES = 1
 //
 // It lives in the SNITCH_MAP function secret, NOT in this file: the repo is
 // public and this array is the answer key. To set it (a permutation of 0..19):
-//   supabase secrets set SNITCH_MAP='[3,11,...]' --project-ref <ref>
+//   supabase secrets set SNITCH_MAP='[<20 numbers, 0-19 in your own order>]' --project-ref <ref>
 function loadMapping(): number[] | null {
   const raw = Deno.env.get('SNITCH_MAP')
   if (!raw) return null

@@ -177,7 +177,7 @@ The snitch occupies one square per 3-second slot, 20 slots per minute, and the c
 The slot→square map is **fixed for all games, not per-game random**, so one answer key works every time. It lives in the `SNITCH_MAP` function secret, deliberately *not* in the repo — this repo is public and the map is the answer key. It is a JSON permutation of 0–19; `snitch-guess` validates it at boot and returns 500 before touching the guess counter if it is missing or malformed. To set or rotate it:
 
 ```bash
-~/.local/node/bin/supabase secrets set SNITCH_MAP='[3,11,...]' --project-ref lzykscaespouwxokvewy
+~/.local/node/bin/supabase secrets set SNITCH_MAP='[<20 numbers, 0-19 in your own order>]' --project-ref lzykscaespouwxokvewy
 ~/.local/node/bin/supabase functions deploy snitch-guess --project-ref lzykscaespouwxokvewy
 ```
 
