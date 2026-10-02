@@ -53,26 +53,38 @@ export default function Team() {
   useEffect(() => {
     if (!teamData) { navigate('/'); return }
     let cleanup = () => {}
+    let cancelled = false
     async function init() {
-      await ensureAnonSession()
-      // If the anon session was renewed (e.g. token expired), the new user_id
-      // won't have a team_sessions row. Re-join using the stored code to restore it.
-      const { data: ts } = await supabase.from('team_sessions').select('team_id').maybeSingle()
-      if (!ts) {
+      // A refresh on bad signal used to log the player out: any failure here
+      // cleared wh_team and sent them back to the join screen, needing a code
+      // only the captain may know. Now only a join code the server actually
+      // rejects does that; network errors and rate limits just retry.
+      for (let attempt = 0; !cancelled; attempt++) {
         try {
-          await joinTeam(teamData.joinCode)
-        } catch {
-          localStorage.removeItem('wh_team')
-          navigate('/')
-          return
+          await ensureAnonSession()
+          // If the anon session was renewed (e.g. token expired), the new user_id
+          // won't have a team_sessions row. Re-join using the stored code to restore it.
+          const { data: ts, error } = await supabase.from('team_sessions').select('team_id').maybeSingle()
+          if (error) throw error
+          if (!ts) await joinTeam(teamData.joinCode)
+          break
+        } catch (e) {
+          if (e?.message === 'Invalid join code') {
+            localStorage.removeItem('wh_team')
+            navigate('/')
+            return
+          }
+          console.error('Team page init failed, retrying:', e)
+          await new Promise(r => setTimeout(r, Math.min(2000 * 2 ** attempt, 15000)))
         }
       }
-      cleanup = setupData()
+      if (!cancelled) cleanup = setupData()
     }
     init()
     supabase.from('rules').select('content').eq('id', 1).single()
       .then(({ data }) => { if (data) setRules(data.content) })
     return () => {
+      cancelled = true
       cleanup()
       for (const t of Object.values(retryRef.current)) clearTimeout(t)
       for (const t of Object.values(debounceRef.current)) clearTimeout(t)
@@ -121,43 +133,79 @@ export default function Team() {
     return () => clearInterval(interval)
   }, [game])
 
+  // Belt and braces for the pre-start lock: if a phone's realtime connection
+  // silently misses the Start update, inputs would stay locked. Until the game
+  // is active, recheck its status every 10s. Stops itself once it starts.
+  useEffect(() => {
+    if (game?.status !== 'setup' || !teamData?.gameId) return
+    const interval = setInterval(() => {
+      supabase.from('games')
+        .select('id, name, status, start_time, duration_minutes, packet2_message, packet3_message')
+        .eq('id', teamData.gameId).single()
+        .then(({ data }) => { if (data && data.status !== 'setup') setGame(data) })
+    }, 10000)
+    return () => clearInterval(interval)
+  }, [game?.status])
+
   function setupData() {
     const { teamId, gameId } = teamData
 
-    supabase.from('games')
-      .select('id, name, status, start_time, duration_minutes, packet2_message, packet3_message')
-      .eq('id', gameId).single()
-      .then(({ data }) => { if (data) setGame(data) })
+    // Fetches everything the page shows. Runs on load, and again whenever the
+    // phone wakes or realtime reconnects: realtime does not replay events
+    // missed while the socket was down, so a phone locked during the briefing
+    // would otherwise never see Start (no countdown, inputs stay locked) or
+    // teammates' answers until someone refreshed. A failed fetch keeps what is
+    // already on screen rather than blanking it.
+    function loadAll() {
+      supabase.from('games')
+        .select('id, name, status, start_time, duration_minutes, packet2_message, packet3_message')
+        .eq('id', gameId).single()
+        .then(({ data }) => { if (data) setGame(data) })
 
-    supabase.from('keywords')
-      .select('slot_number, display_label, has_hint')
-      .eq('game_id', gameId).order('slot_number')
-      .then(({ data }) => setKeywords(data || []))
+      supabase.from('keywords')
+        .select('slot_number, display_label, has_hint')
+        .eq('game_id', gameId).order('slot_number')
+        .then(({ data }) => { if (data) setKeywords(data) })
 
-    supabase.from('team_answers')
-      .select('keyword_slot, submitted_answer')
-      .eq('team_id', teamId)
-      .then(({ data }) => {
-        const map = {}
-        for (const a of (data || [])) map[a.keyword_slot] = a
-        setAnswers(map)
-      })
+      supabase.from('team_answers')
+        .select('keyword_slot, submitted_answer')
+        .eq('team_id', teamId)
+        .then(({ data }) => {
+          if (!data) return
+          setAnswers(prev => {
+            const map = {}
+            for (const a of data) map[a.keyword_slot] = a
+            // Same rule as the realtime handler: never overwrite a slot with
+            // local text that hasn't been written yet.
+            for (const slot of Object.keys(prev)) {
+              if (debounceRef.current[slot] || pendingRef.current[slot] !== undefined) map[slot] = prev[slot]
+            }
+            return map
+          })
+        })
 
-    refreshCorrectCount()
+      refreshCorrectCount()
 
-    supabase.from('adjustments')
-      .select('*').eq('team_id', teamId).order('created_at')
-      .then(({ data }) => setAdjustments(data || []))
+      supabase.from('adjustments')
+        .select('*').eq('team_id', teamId).order('created_at')
+        .then(({ data }) => { if (data) setAdjustments(data) })
 
-    supabase.from('teams')
-      .select('end_time, disqualified').eq('id', teamId).single()
-      .then(({ data }) => { setDone(!!data?.end_time); setDisqualified(!!data?.disqualified) })
+      supabase.from('teams')
+        .select('end_time, disqualified').eq('id', teamId).single()
+        .then(({ data }) => { if (data) { setDone(!!data.end_time); setDisqualified(!!data.disqualified) } })
 
-    supabase.from('team_hint_requests')
-      .select('keyword_slot, hint_number')
-      .eq('team_id', teamId)
-      .then(({ data }) => setHintRequests(data || []))
+      supabase.from('team_hint_requests')
+        .select('keyword_slot, hint_number')
+        .eq('team_id', teamId)
+        .then(({ data }) => { if (data) setHintRequests(data) })
+    }
 
+    loadAll()
+
+    const onVisible = () => { if (document.visibilityState === 'visible') loadAll() }
+    document.addEventListener('visibilitychange', onVisible)
+
+    let subscribedOnce = false
     const channel = supabase
       .channel(`team-${teamId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'team_answers', filter: `team_id=eq.${teamId}` },
@@ -181,9 +229,17 @@ export default function Team() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'team_hint_requests', filter: `team_id=eq.${teamId}` },
         () => supabase.from('team_hint_requests').select('keyword_slot, hint_number').eq('team_id', teamId)
           .then(({ data }) => setHintRequests(data || [])))
-      .subscribe()
-
-    return () => supabase.removeChannel(channel)
+      .subscribe((status) => {
+        // The first SUBSCRIBED follows the loadAll() above; later ones are
+        // reconnects, after which anything sent while down is gone.
+        if (status !== 'SUBSCRIBED') return
+        if (subscribedOnce) loadAll()
+        subscribedOnce = true
+      })
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      supabase.removeChannel(channel)
+    }
   }
 
   // A rejected save used to be dropped on the floor: the box kept showing the
@@ -278,6 +334,9 @@ export default function Team() {
   const timerClass = isExpired ? 'expired' : isWarning ? 'warning' : ''
 
   const sealed = done || disqualified
+  // Teams join early, so answers and hints stay locked until Start. Only an
+  // explicit 'setup' locks — a game row that failed to load must not.
+  const notStarted = game?.status === 'setup'
 
   const timeElapsedFraction = (timeLeftMs !== null && totalMs)
     ? Math.max(0, 1 - timeLeftMs / totalMs) : 0
@@ -437,8 +496,12 @@ export default function Team() {
                         type="text"
                         value={ans?.submitted_answer || ''}
                         onChange={e => handleChange(slot, e.target.value)}
-                        placeholder={sealed ? 'Answers sealed' : 'Write your answer here…'}
-                        disabled={sealed}
+                        placeholder={sealed ? 'Answers sealed' : notStarted ? 'Opens when the game starts' : 'Write your answer here…'}
+                        disabled={sealed || notStarted}
+                        autoCorrect="off"
+                        autoCapitalize="off"
+                        autoComplete="off"
+                        spellCheck={false}
                       />
 
                       {kw?.has_hint && (
@@ -453,7 +516,7 @@ export default function Team() {
                             ) : (
                               <span className="hp-hint-limit">Loading hint…</span>
                             )
-                          ) : sealed ? null
+                          ) : (sealed || notStarted) ? null
                           : totalHints >= 3 ? (
                             <span className="hp-hint-limit">Hint limit reached</span>
                           ) : (
