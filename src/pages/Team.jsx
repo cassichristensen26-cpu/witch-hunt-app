@@ -511,7 +511,7 @@ export default function Team() {
                               <div className="hp-hint-box">
                                 <div className="hp-hint-label">Hint</div>
                                 <div className="hp-hint-text">{revealedHints[slot]}</div>
-                                <div className="hp-hint-sub">If this doesn't help, contact Race Command with a screenshot and what you've tried.</div>
+                                <div className="hp-hint-sub">If this doesn't help, contact Cassi and Rachael with a screenshot and what you've tried.</div>
                               </div>
                             ) : (
                               <span className="hp-hint-limit">Loading hint…</span>
