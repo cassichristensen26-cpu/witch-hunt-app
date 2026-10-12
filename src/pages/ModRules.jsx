@@ -2,22 +2,22 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { modSaveRules } from '../lib/api'
-import { resolveHintHelp } from '../lib/hintHelp'
+import { TEAM_MESSAGES, TEAM_MESSAGE_COLUMNS, resolveMessages } from '../lib/teamMessages'
 
 export default function ModRules() {
   const navigate = useNavigate()
   const token = localStorage.getItem('wh_mod_token')
 
   const [content, setContent] = useState('')
-  const [hintHelp, setHintHelp] = useState(resolveHintHelp(null))
+  const [messages, setMessages] = useState(resolveMessages(null))
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
   useEffect(() => {
     if (!token) { navigate('/mod'); return }
-    supabase.from('rules').select('content, hint_help').eq('id', 1).single()
-      .then(({ data }) => { if (data) { setContent(data.content); setHintHelp(resolveHintHelp(data.hint_help)) } })
+    supabase.from('rules').select(`content, ${TEAM_MESSAGE_COLUMNS}`).eq('id', 1).single()
+      .then(({ data }) => { if (data) { setContent(data.content); setMessages(resolveMessages(data)) } })
       .finally(() => setLoading(false))
   }, [])
 
@@ -25,7 +25,7 @@ export default function ModRules() {
     setSaving(true)
     setSaved(false)
     try {
-      await modSaveRules(token, content, hintHelp)
+      await modSaveRules(token, content, messages)
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
     } catch (e) {
@@ -79,20 +79,22 @@ export default function ModRules() {
           className="w-full bg-gray-900 border border-gray-700 rounded-2xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-purple-500 resize-none leading-relaxed"
         />
 
-        <div className="mt-6">
-          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-            Message Under Each Hint
-          </label>
-          <p className="text-xs text-gray-600 mb-2">
-            Shown under every hint a team reveals. Leave blank to show nothing.
-          </p>
-          <textarea
-            value={hintHelp}
-            onChange={e => setHintHelp(e.target.value)}
-            rows={2}
-            className="w-full bg-gray-900 border border-gray-700 rounded-2xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-purple-500 resize-none leading-relaxed"
-          />
-        </div>
+        {TEAM_MESSAGES.map(m => (
+          <div key={m.key} className="mt-6">
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+              {m.label}
+            </label>
+            <p className="text-xs text-gray-600 mb-2">
+              {m.help} Leave blank to show nothing.
+            </p>
+            <textarea
+              value={messages[m.key]}
+              onChange={e => setMessages(prev => ({ ...prev, [m.key]: e.target.value }))}
+              rows={2}
+              className="w-full bg-gray-900 border border-gray-700 rounded-2xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-purple-500 resize-none leading-relaxed"
+            />
+          </div>
+        ))}
 
         <p className="text-xs text-gray-700 mt-3 text-center">
           Rules are shared across all games. Saving here updates what every team sees immediately.

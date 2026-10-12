@@ -7,7 +7,8 @@ Deno.serve(async (req) => {
 
   if (!await validateModToken(req)) return err('Unauthorized', 401)
 
-  const { content, hint_help } = await req.json()
+  const body = await req.json()
+  const { content } = body
   if (content == null) return err('content required')
 
   const supabase = createClient(
@@ -19,8 +20,13 @@ Deno.serve(async (req) => {
     .from('rules')
     .update({
       content,
-      // Older clients don't send hint_help; leave the stored value alone then.
-      ...(hint_help !== undefined ? { hint_help } : {}),
+      // Team-facing messages (src/lib/teamMessages.js). Only the ones sent are
+      // written, so an older client leaves the rest alone.
+      ...Object.fromEntries(
+        ['hint_help', 'time_warning', 'time_up']
+          .filter(k => typeof body[k] === 'string')
+          .map(k => [k, body[k]])
+      ),
       updated_at: new Date().toISOString(),
     })
     .eq('id', 1)

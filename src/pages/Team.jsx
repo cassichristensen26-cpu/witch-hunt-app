@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { upsertAnswer, ensureAnonSession, requestHint, joinTeam } from '../lib/api'
 import { syncClock, serverNow } from '../lib/clock'
 import { formatCountdown, packetThreshold } from '../lib/scoring'
-import { resolveHintHelp } from '../lib/hintHelp'
+import { resolveMessages, TEAM_MESSAGE_COLUMNS } from '../lib/teamMessages'
 import '../styles/hp-scroll.css'
 
 export default function Team() {
@@ -39,7 +39,7 @@ export default function Team() {
 
   const [activeTab, setActiveTab] = useState('ingredients')
   const [rules, setRules] = useState('')
-  const [hintHelp, setHintHelp] = useState(resolveHintHelp(null))
+  const [messages, setMessages] = useState(resolveMessages(null))
 
   const debounceRef = useRef({})
   const fetchedHintSlotsRef = useRef(new Set())
@@ -81,8 +81,8 @@ export default function Team() {
       if (!cancelled) cleanup = setupData()
     }
     init()
-    supabase.from('rules').select('content, hint_help').eq('id', 1).single()
-      .then(({ data }) => { if (data) { setRules(data.content); setHintHelp(resolveHintHelp(data.hint_help)) } })
+    supabase.from('rules').select(`content, ${TEAM_MESSAGE_COLUMNS}`).eq('id', 1).single()
+      .then(({ data }) => { if (data) { setRules(data.content); setMessages(resolveMessages(data)) } })
     return () => {
       cancelled = true
       cleanup()
@@ -391,8 +391,10 @@ export default function Team() {
             <div className={`hp-timer ${timerClass}`}>
               <div className={`hp-timer-label ${timerClass}`}>{isExpired ? "Time's Up" : 'Time Remaining'}</div>
               <div className={`hp-timer-value ${timerClass}`}>{isExpired ? '0:00' : formatCountdown(timeLeftMs)}</div>
-              {isWarning && !isExpired && <div className="hp-timer-warning-msg warning">Head back now — late returns cost ingredients.</div>}
-              {isExpired && <div className="hp-timer-warning-msg expired">{answersClosed ? 'Answers are closed. ' : ''}Return immediately to avoid penalties!</div>}
+              {isWarning && !isExpired && messages.time_warning && <div className="hp-timer-warning-msg warning">{messages.time_warning}</div>}
+              {isExpired && (answersClosed || messages.time_up) && (
+                <div className="hp-timer-warning-msg expired">{[answersClosed && 'Answers are closed.', messages.time_up].filter(Boolean).join(' ')}</div>
+              )}
             </div>
           )}
 
@@ -519,7 +521,7 @@ export default function Team() {
                               <div className="hp-hint-box">
                                 <div className="hp-hint-label">Hint</div>
                                 <div className="hp-hint-text">{revealedHints[slot]}</div>
-                                {hintHelp && <div className="hp-hint-sub">{hintHelp}</div>}
+                                {messages.hint_help && <div className="hp-hint-sub">{messages.hint_help}</div>}
                               </div>
                             ) : (
                               <span className="hp-hint-limit">Loading hint…</span>

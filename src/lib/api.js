@@ -169,4 +169,5 @@ export const modSaveSnitchText = (token, text) => edge('moderator-save-snitch-te
 export const modGetGame = (token, gameId) => edgeGet('moderator-get-game', { game_id: gameId }, token)
 export const modAutoClose = (token, gameId) => edge('moderator-auto-close', { game_id: gameId }, token)
 export const modGetTeam = (token, teamId) => edgeGet('moderator-get-team', { team_id: teamId }, token)
-export const modSaveRules = (token, content, hintHelp) => edge('moderator-save-rules', { content, hint_help: hintHelp }, token)
+// messages: { hint_help, time_warning, time_up } — see lib/teamMessages.js
+export const modSaveRules = (token, content, messages) => edge('moderator-save-rules', { content, ...messages }, token)
