@@ -7,7 +7,7 @@ Deno.serve(async (req) => {
 
   if (!await validateModToken(req)) return err('Unauthorized', 401)
 
-  const { content } = await req.json()
+  const { content, hint_help } = await req.json()
   if (content == null) return err('content required')
 
   const supabase = createClient(
@@ -17,7 +17,12 @@ Deno.serve(async (req) => {
 
   const { error } = await supabase
     .from('rules')
-    .update({ content, updated_at: new Date().toISOString() })
+    .update({
+      content,
+      // Older clients don't send hint_help; leave the stored value alone then.
+      ...(hint_help !== undefined ? { hint_help } : {}),
+      updated_at: new Date().toISOString(),
+    })
     .eq('id', 1)
 
   if (error) return err(error.message, 500)

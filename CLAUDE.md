@@ -53,7 +53,7 @@ Key tables:
 - `team_sessions` — maps anonymous user_id → team_id
 - `team_hint_requests` — tracks which hints claimed per team/slot
 - `team_finish_events` — history of done/undone toggles
-- `rules` — single row (id=1), global rules text visible to all teams
+- `rules` — single row (id=1), global rules text visible to all teams, plus `hint_help` (the line under each revealed hint, edited on ModRules; NULL → `DEFAULT_HINT_HELP` in `src/lib/hintHelp.js`, '' → hidden)
 - `snitch_games` — one row per team: guess count, penalty count, caught flag
 - `snitch_text` — single row (id=1), moderator-editable snitch copy: `fixtures`, `nudge_1`, `nudge_2`, `banner`
 

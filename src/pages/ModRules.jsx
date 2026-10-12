@@ -2,20 +2,22 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { modSaveRules } from '../lib/api'
+import { resolveHintHelp } from '../lib/hintHelp'
 
 export default function ModRules() {
   const navigate = useNavigate()
   const token = localStorage.getItem('wh_mod_token')
 
   const [content, setContent] = useState('')
+  const [hintHelp, setHintHelp] = useState(resolveHintHelp(null))
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
   useEffect(() => {
     if (!token) { navigate('/mod'); return }
-    supabase.from('rules').select('content').eq('id', 1).single()
-      .then(({ data }) => { if (data) setContent(data.content) })
+    supabase.from('rules').select('content, hint_help').eq('id', 1).single()
+      .then(({ data }) => { if (data) { setContent(data.content); setHintHelp(resolveHintHelp(data.hint_help)) } })
       .finally(() => setLoading(false))
   }, [])
 
@@ -23,7 +25,7 @@ export default function ModRules() {
     setSaving(true)
     setSaved(false)
     try {
-      await modSaveRules(token, content)
+      await modSaveRules(token, content, hintHelp)
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
     } catch (e) {
@@ -76,6 +78,21 @@ export default function ModRules() {
           rows={20}
           className="w-full bg-gray-900 border border-gray-700 rounded-2xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-purple-500 resize-none leading-relaxed"
         />
+
+        <div className="mt-6">
+          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+            Message Under Each Hint
+          </label>
+          <p className="text-xs text-gray-600 mb-2">
+            Shown under every hint a team reveals. Leave blank to show nothing.
+          </p>
+          <textarea
+            value={hintHelp}
+            onChange={e => setHintHelp(e.target.value)}
+            rows={2}
+            className="w-full bg-gray-900 border border-gray-700 rounded-2xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-purple-500 resize-none leading-relaxed"
+          />
+        </div>
 
         <p className="text-xs text-gray-700 mt-3 text-center">
           Rules are shared across all games. Saving here updates what every team sees immediately.

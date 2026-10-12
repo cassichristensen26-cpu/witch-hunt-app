@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { upsertAnswer, ensureAnonSession, requestHint, joinTeam } from '../lib/api'
 import { syncClock, serverNow } from '../lib/clock'
 import { formatCountdown, packetThreshold } from '../lib/scoring'
+import { resolveHintHelp } from '../lib/hintHelp'
 import '../styles/hp-scroll.css'
 
 export default function Team() {
@@ -38,6 +39,7 @@ export default function Team() {
 
   const [activeTab, setActiveTab] = useState('ingredients')
   const [rules, setRules] = useState('')
+  const [hintHelp, setHintHelp] = useState(resolveHintHelp(null))
 
   const debounceRef = useRef({})
   const fetchedHintSlotsRef = useRef(new Set())
@@ -79,8 +81,8 @@ export default function Team() {
       if (!cancelled) cleanup = setupData()
     }
     init()
-    supabase.from('rules').select('content').eq('id', 1).single()
-      .then(({ data }) => { if (data) setRules(data.content) })
+    supabase.from('rules').select('content, hint_help').eq('id', 1).single()
+      .then(({ data }) => { if (data) { setRules(data.content); setHintHelp(resolveHintHelp(data.hint_help)) } })
     return () => {
       cancelled = true
       cleanup()
@@ -511,7 +513,7 @@ export default function Team() {
                               <div className="hp-hint-box">
                                 <div className="hp-hint-label">Hint</div>
                                 <div className="hp-hint-text">{revealedHints[slot]}</div>
-                                <div className="hp-hint-sub">If this doesn't help, contact Cassi and Rachael with a screenshot and what you've tried.</div>
+                                {hintHelp && <div className="hp-hint-sub">{hintHelp}</div>}
                               </div>
                             ) : (
                               <span className="hp-hint-limit">Loading hint…</span>
