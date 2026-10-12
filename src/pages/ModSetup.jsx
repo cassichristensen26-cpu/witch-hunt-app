@@ -20,7 +20,7 @@ export default function ModSetup() {
   const [packet2Message, setPacket2Message] = useState('')
   const [packet3Message, setPacket3Message] = useState('')
   const [ingredients, setIngredients] = useState(
-    Array.from({ length: MAX_SLOTS }, () => ({ answer: '', hint: '' }))
+    Array.from({ length: MAX_SLOTS }, () => ({ answer: '', hint: '', puzzle: '' }))
   )
   const [teamNames, setTeamNames] = useState(['', '', ''])
   const [loading, setLoading] = useState(false)
@@ -76,6 +76,7 @@ export default function ModSetup() {
           display_label: `Ingredient ${i + 1}`,
           correct_answer: k.answer.trim(),
           ...(k.hint.trim() ? { hint: k.hint.trim() } : {}),
+          ...(k.puzzle?.trim() ? { puzzle_description: k.puzzle.trim() } : {}),
         })),
         teams,
       })
@@ -227,6 +228,13 @@ export default function ModSetup() {
                   </div>
                   <input
                     type="text"
+                    value={k.puzzle ?? ''}
+                    onChange={e => updateIng(i, 'puzzle', e.target.value)}
+                    placeholder="Puzzle description (optional — moderators only)"
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-purple-600"
+                  />
+                  <input
+                    type="text"
                     value={k.answer}
                     onChange={e => updateIng(i, 'answer', e.target.value)}
                     placeholder="Correct answer (hidden from teams)"
@@ -245,7 +253,7 @@ export default function ModSetup() {
               {ingredients.length < MAX_SLOTS && (
                 <button
                   type="button"
-                  onClick={() => setIngredients(prev => [...prev, { answer: '', hint: '' }])}
+                  onClick={() => setIngredients(prev => [...prev, { answer: '', hint: '', puzzle: '' }])}
                   className="w-full border border-dashed border-gray-800 hover:border-gray-600 rounded-xl py-3 text-gray-600 hover:text-gray-400 text-sm transition-colors"
                 >
                   + Add ingredient

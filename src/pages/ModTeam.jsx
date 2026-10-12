@@ -154,6 +154,9 @@ export default function ModTeam() {
                           )}
                         </p>
                       )}
+                      {kw?.puzzle_description && (
+                        <p className="text-xs leading-tight text-indigo-300/80 italic mt-0.5">{kw.puzzle_description}</p>
+                      )}
                       <p className={`text-sm truncate ${
                         ans?.submitted_answer
                           ? flagged ? 'text-amber-200 font-medium' : correct ? 'text-green-200' : 'text-white'

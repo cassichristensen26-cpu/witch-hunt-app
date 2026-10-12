@@ -46,7 +46,7 @@ supabase/
 
 Key tables:
 - `games` — one per game session (`status`: setup → active)
-- `keywords` — 1–9 rows per game (correct_answer, hint, display_label). **The row count is the game's ingredient count** — Team page boxes, ModTeam's answer list and the leaderboard's `found/total` all derive from it (leaderboard via `keyword_count` from `moderator-get-game`). Max 9 is enforced by the `slot_number`/`keyword_slot` CHECK constraints.
+- `keywords` — 1–9 rows per game (correct_answer, hint, display_label). **The row count is the game's ingredient count** — Team page boxes, ModTeam's answer list and the leaderboard's `found/total` all derive from it (leaderboard via `keyword_count` from `moderator-get-game`). Max 9 is enforced by the `slot_number`/`keyword_slot` CHECK constraints. `puzzle_description` is an optional moderator-only note shown under each slot in ModTeam; like `correct_answer` it is not in the column GRANT, so teams can't read it.
 - `teams` — join_code (6 random chars), end_time, disqualified
 - `team_answers` — keyword_slot 1–9, submitted_answer, is_correct, moderator_override, change_count, change_window_start
 - `adjustments` — time_bonus / time_penalty / keyword_bonus / keyword_penalty

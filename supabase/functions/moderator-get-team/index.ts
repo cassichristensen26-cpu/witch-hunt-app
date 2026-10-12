@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
   const [{ data: answers }, { data: adjustments }, { data: keywords }, { data: finishEvents }, { data: game }] = await Promise.all([
     supabase.from('team_answers').select('*').eq('team_id', team_id).order('keyword_slot'),
     supabase.from('adjustments').select('*').eq('team_id', team_id).order('created_at'),
-    supabase.from('keywords').select('slot_number, display_label, correct_answer').eq('game_id', team.game_id).order('slot_number'),
+    supabase.from('keywords').select('slot_number, display_label, correct_answer, puzzle_description').eq('game_id', team.game_id).order('slot_number'),
     supabase.from('team_finish_events').select('*').eq('team_id', team_id).order('created_at'),
     supabase.from('games').select('start_time').eq('id', team.game_id).single(),
   ])

@@ -30,12 +30,13 @@ Deno.serve(async (req) => {
 
   // Insert keywords
   const { error: kwErr } = await supabase.from('keywords').insert(
-    keywords.map((k: { slot_number: number; display_label: string; correct_answer: string; hint?: string }) => ({
+    keywords.map((k: { slot_number: number; display_label: string; correct_answer: string; hint?: string; puzzle_description?: string }) => ({
       game_id: game.id,
       slot_number: k.slot_number,
       display_label: k.display_label,
       correct_answer: k.correct_answer,
       ...(k.hint ? { hint: k.hint } : {}),
+      ...(k.puzzle_description ? { puzzle_description: k.puzzle_description } : {}),
     }))
   )
   if (kwErr) return err(kwErr.message, 500)
