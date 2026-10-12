@@ -174,10 +174,10 @@ export default function ModSetup() {
           <div className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                Packet 2 Pickup Message
+                Packet 2 Pickup Message <span className="normal-case font-normal text-gray-600">(optional)</span>
               </label>
               <p className="text-xs text-gray-600 mb-2">
-                Shown to teams when they find a third of the ingredients ({packetThreshold(ingredients.length, 1)} of {ingredients.length}) or 1/3 of time has passed — whichever comes first.
+                Shown to teams when they find a third of the ingredients ({packetThreshold(ingredients.length, 1)} of {ingredients.length}) or 1/3 of time has passed — whichever comes first. Leave blank and teams never see a Packet 2 notice.
               </p>
               <textarea
                 value={packet2Message}
@@ -189,10 +189,10 @@ export default function ModSetup() {
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                Packet 3 Pickup Message
+                Packet 3 Pickup Message <span className="normal-case font-normal text-gray-600">(optional)</span>
               </label>
               <p className="text-xs text-gray-600 mb-2">
-                Shown to teams when they find two thirds of the ingredients ({packetThreshold(ingredients.length, 2)} of {ingredients.length}) or 2/3 of time has passed — whichever comes first.
+                Shown to teams when they find two thirds of the ingredients ({packetThreshold(ingredients.length, 2)} of {ingredients.length}) or 2/3 of time has passed — whichever comes first. Leave blank and teams never see a Packet 3 notice.
               </p>
               <textarea
                 value={packet3Message}
