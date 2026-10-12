@@ -102,7 +102,7 @@ export default function ModTeam() {
             <p className="text-sm text-gray-600 mt-0.5">
               Code: <span className="font-mono text-purple-400">{team.join_code}</span>
               {' · '}
-              <span className="text-purple-300 font-semibold">{effectiveKw}/9 keywords</span>
+              <span className="text-purple-300 font-semibold">{effectiveKw}/{keywords.length} keywords</span>
             </p>
           </div>
           <button
@@ -126,7 +126,7 @@ export default function ModTeam() {
         <section className="mb-8">
           <h2 className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-3">Answers</h2>
           <div className="space-y-1.5">
-            {[1,2,3,4,5,6,7,8,9].map(slot => {
+            {keywords.map(k => k.slot_number).map(slot => {
               const ans = answerMap[slot]
               const kw = keywords.find(k => k.slot_number === slot)
               const correct = ans?.is_correct

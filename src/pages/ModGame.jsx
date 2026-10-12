@@ -94,6 +94,8 @@ export default function ModGame() {
   if (!gameData) return null
 
   const { game, teams, answers_by_team, adjustments_by_team } = gameData
+  // Older deploys of moderator-get-game don't send this; every game used to have 9.
+  const keywordCount = gameData.keyword_count ?? 9
   const scored = teams.map(t =>
     scoreTeam(t, answers_by_team[t.id] || [], adjustments_by_team[t.id] || [], game)
   )
@@ -173,7 +175,7 @@ export default function ModGame() {
             <p className="text-xs text-gray-700 uppercase tracking-wider px-1 mb-2">Finished</p>
             <div className="space-y-2">
               {finished.map((s, i) => (
-                <TeamRow key={s.team.id} rank={i + 1} scored={s} busy={!!toggling[s.team.id]} onToggle={() => handleToggle(s.team.id, true)} flagged={hasFlaggedAnswers(s.team.id)} />
+                <TeamRow key={s.team.id} rank={i + 1} scored={s} busy={!!toggling[s.team.id]} onToggle={() => handleToggle(s.team.id, true)} flagged={hasFlaggedAnswers(s.team.id)} keywordCount={keywordCount} />
               ))}
             </div>
           </div>
@@ -184,7 +186,7 @@ export default function ModGame() {
             <p className="text-xs text-gray-700 uppercase tracking-wider px-1 mb-2">In Progress</p>
             <div className="space-y-2">
               {inProgress.map(s => (
-                <TeamRow key={s.team.id} rank={null} scored={s} busy={!!toggling[s.team.id]} onToggle={() => handleToggle(s.team.id, false)} flagged={hasFlaggedAnswers(s.team.id)} />
+                <TeamRow key={s.team.id} rank={null} scored={s} busy={!!toggling[s.team.id]} onToggle={() => handleToggle(s.team.id, false)} flagged={hasFlaggedAnswers(s.team.id)} keywordCount={keywordCount} />
               ))}
             </div>
           </div>
@@ -195,7 +197,7 @@ export default function ModGame() {
             <p className="text-xs text-red-900 uppercase tracking-wider px-1 mb-2">Disqualified</p>
             <div className="space-y-2">
               {disqualified.map(s => (
-                <TeamRow key={s.team.id} rank={null} scored={s} busy={!!toggling[s.team.id]} onToggle={() => handleToggle(s.team.id, true)} flagged={hasFlaggedAnswers(s.team.id)} />
+                <TeamRow key={s.team.id} rank={null} scored={s} busy={!!toggling[s.team.id]} onToggle={() => handleToggle(s.team.id, true)} flagged={hasFlaggedAnswers(s.team.id)} keywordCount={keywordCount} />
               ))}
             </div>
           </div>
@@ -209,7 +211,7 @@ export default function ModGame() {
   )
 }
 
-function TeamRow({ rank, scored, busy, onToggle, flagged }) {
+function TeamRow({ rank, scored, busy, onToggle, flagged, keywordCount }) {
   const { team, keywordsFound, adjustedTime, finished, disqualified } = scored
   return (
     <div className={`flex items-center gap-3 border rounded-2xl px-4 py-3 ${disqualified ? 'bg-red-950 border-red-900' : 'bg-gray-900 border-gray-800'}`}>
@@ -232,7 +234,7 @@ function TeamRow({ rank, scored, busy, onToggle, flagged }) {
       </Link>
 
       <span className={`w-10 text-right font-mono text-sm font-semibold shrink-0 ${disqualified ? 'text-red-400' : 'text-purple-300'}`}>
-        {disqualified ? '—' : `${keywordsFound}/9`}
+        {disqualified ? '—' : `${keywordsFound}/${keywordCount}`}
       </span>
       <span className="w-14 text-right text-gray-400 font-mono text-sm shrink-0">
         {finished ? formatTime(adjustedTime) : '…'}

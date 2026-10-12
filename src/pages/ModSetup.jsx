@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { modCreateGame } from '../lib/api'
+import { packetThreshold } from '../lib/scoring'
 
-const SLOT_COUNT = 9
+// The keywords/team_answers tables CHECK slot numbers BETWEEN 1 AND 9.
+const MAX_SLOTS = 9
 
 function generateCode() {
   const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
@@ -18,7 +20,7 @@ export default function ModSetup() {
   const [packet2Message, setPacket2Message] = useState('')
   const [packet3Message, setPacket3Message] = useState('')
   const [ingredients, setIngredients] = useState(
-    Array.from({ length: SLOT_COUNT }, () => ({ answer: '', hint: '' }))
+    Array.from({ length: MAX_SLOTS }, () => ({ answer: '', hint: '' }))
   )
   const [teamNames, setTeamNames] = useState(['', '', ''])
   const [loading, setLoading] = useState(false)
@@ -27,6 +29,9 @@ export default function ModSetup() {
 
   const updateIng = (i, field, val) =>
     setIngredients(prev => prev.map((k, idx) => idx === i ? { ...k, [field]: val } : k))
+
+  const removeIng = (i) =>
+    setIngredients(prev => prev.filter((_, idx) => idx !== i))
 
   const updateTeam = (i, val) =>
     setTeamNames(prev => prev.map((t, idx) => idx === i ? val : t))
@@ -54,7 +59,7 @@ export default function ModSetup() {
     e.preventDefault()
     const validTeams = teamNames.map(t => t.trim()).filter(Boolean)
     if (!validTeams.length) return setError('Add at least one team name')
-    if (ingredients.some(k => !k.answer.trim())) return setError('All 9 ingredient answers are required')
+    if (ingredients.some(k => !k.answer.trim())) return setError('Every ingredient needs a correct answer — remove any you are not using')
     if (!token) { navigate('/mod'); return }
 
     setLoading(true)
@@ -171,7 +176,7 @@ export default function ModSetup() {
                 Packet 2 Pickup Message
               </label>
               <p className="text-xs text-gray-600 mb-2">
-                Shown to teams when they find 3 ingredients or 1/3 of time has passed — whichever comes first.
+                Shown to teams when they find a third of the ingredients ({packetThreshold(ingredients.length, 1)} of {ingredients.length}) or 1/3 of time has passed — whichever comes first.
               </p>
               <textarea
                 value={packet2Message}
@@ -186,7 +191,7 @@ export default function ModSetup() {
                 Packet 3 Pickup Message
               </label>
               <p className="text-xs text-gray-600 mb-2">
-                Shown to teams when they find 6 ingredients or 2/3 of time has passed — whichever comes first.
+                Shown to teams when they find two thirds of the ingredients ({packetThreshold(ingredients.length, 2)} of {ingredients.length}) or 2/3 of time has passed — whichever comes first.
               </p>
               <textarea
                 value={packet3Message}
@@ -201,14 +206,25 @@ export default function ModSetup() {
           {/* Ingredients */}
           <div>
             <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
-              Ingredients &amp; Correct Answers
+              Ingredients &amp; Correct Answers ({ingredients.length})
             </label>
             <div className="space-y-3">
               {ingredients.map((k, i) => (
                 <div key={i} className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-3">
-                  <p className="text-xs font-semibold text-purple-400 uppercase tracking-wide">
-                    Ingredient {i + 1}
-                  </p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold text-purple-400 uppercase tracking-wide">
+                      Ingredient {i + 1}
+                    </p>
+                    {ingredients.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeIng(i)}
+                        className="text-gray-700 hover:text-red-400 text-sm transition-colors"
+                      >
+                        ✕ Remove
+                      </button>
+                    )}
+                  </div>
                   <input
                     type="text"
                     value={k.answer}
@@ -226,6 +242,15 @@ export default function ModSetup() {
                   />
                 </div>
               ))}
+              {ingredients.length < MAX_SLOTS && (
+                <button
+                  type="button"
+                  onClick={() => setIngredients(prev => [...prev, { answer: '', hint: '' }])}
+                  className="w-full border border-dashed border-gray-800 hover:border-gray-600 rounded-xl py-3 text-gray-600 hover:text-gray-400 text-sm transition-colors"
+                >
+                  + Add ingredient
+                </button>
+              )}
             </div>
           </div>
 

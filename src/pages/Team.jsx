@@ -3,10 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { upsertAnswer, ensureAnonSession, requestHint, joinTeam } from '../lib/api'
 import { syncClock, serverNow } from '../lib/clock'
-import { formatCountdown } from '../lib/scoring'
+import { formatCountdown, packetThreshold } from '../lib/scoring'
 import '../styles/hp-scroll.css'
-
-const SLOTS = [1, 2, 3, 4, 5, 6, 7, 8, 9]
 
 export default function Team() {
   const navigate = useNavigate()
@@ -320,6 +318,8 @@ export default function Team() {
   }
 
   const kwFor = (slot) => keywords.find(k => k.slot_number === slot)
+  // One box per ingredient the moderator actually set up for this game.
+  const slots = keywords.map(k => k.slot_number)
   const totalHints = hintRequests.length
 
   const allAdj = adjustments.filter(a =>
@@ -340,8 +340,8 @@ export default function Team() {
 
   const timeElapsedFraction = (timeLeftMs !== null && totalMs)
     ? Math.max(0, 1 - timeLeftMs / totalMs) : 0
-  const showPacket2 = !sealed && !isExpired && !!(game?.packet2_message && (correctCount >= 3 || timeElapsedFraction >= 1 / 3))
-  const showPacket3 = !sealed && !isExpired && !!(game?.packet3_message && (correctCount >= 6 || timeElapsedFraction >= 2 / 3))
+  const showPacket2 = !sealed && !isExpired && !!(game?.packet2_message && ((slots.length > 0 && correctCount >= packetThreshold(slots.length, 1)) || timeElapsedFraction >= 1 / 3))
+  const showPacket3 = !sealed && !isExpired && !!(game?.packet3_message && ((slots.length > 0 && correctCount >= packetThreshold(slots.length, 2)) || timeElapsedFraction >= 2 / 3))
 
   const ceremonyDate = game?.start_time && game?.duration_minutes
     ? new Date(new Date(game.start_time).getTime() + (game.duration_minutes + 10) * 60000)
@@ -469,7 +469,7 @@ export default function Team() {
 
               {/* Ingredient slots */}
               <div>
-                {SLOTS.map(slot => {
+                {slots.map(slot => {
                   const kw = kwFor(slot)
                   const ans = answers[slot]
                   const hasAnswer = (ans?.submitted_answer || '').trim().length > 0

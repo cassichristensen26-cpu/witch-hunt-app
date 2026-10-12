@@ -44,3 +44,9 @@ export function formatCountdown(ms) {
   const s = totalSeconds % 60
   return `${m}:${String(s).padStart(2, '0')}`
 }
+
+// Correct answers needed to unlock packet 2 (third=1) or packet 3 (third=2).
+// Scales with the game's ingredient count: 9 ingredients -> 3 and 6, as before.
+export function packetThreshold(ingredientCount, third) {
+  return Math.max(1, Math.ceil((ingredientCount * third) / 3))
+}

@@ -1,6 +1,6 @@
 # Witch Hunt App
 
-A mobile-first party game app where 12–16 teams race around a city collecting 9 keywords/ingredients. Built for a third party who hosts it on their own Supabase account.
+A mobile-first party game app where 12–16 teams race around a city collecting up to 9 keywords/ingredients (the moderator picks 1–9 per game at setup). Built for a third party who hosts it on their own Supabase account.
 
 ## Tech Stack
 
@@ -46,7 +46,7 @@ supabase/
 
 Key tables:
 - `games` — one per game session (`status`: setup → active)
-- `keywords` — 9 rows per game (correct_answer, hint, display_label)
+- `keywords` — 1–9 rows per game (correct_answer, hint, display_label). **The row count is the game's ingredient count** — Team page boxes, ModTeam's answer list and the leaderboard's `found/total` all derive from it (leaderboard via `keyword_count` from `moderator-get-game`). Max 9 is enforced by the `slot_number`/`keyword_slot` CHECK constraints.
 - `teams` — join_code (6 random chars), end_time, disqualified
 - `team_answers` — keyword_slot 1–9, submitted_answer, is_correct, moderator_override, change_count, change_window_start
 - `adjustments` — time_bonus / time_penalty / keyword_bonus / keyword_penalty
@@ -166,7 +166,7 @@ Fires on `BEFORE INSERT OR UPDATE OF submitted_answer`. Resets `moderator_overri
 
 ## Packet Pickup Messages
 
-Shown on team page when ≥3 correct OR ≥1/3 time elapsed (packet 2) and ≥6 correct OR ≥2/3 time elapsed (packet 3). Collapsible, collapse state persisted in localStorage.
+Shown on team page when ≥⅓ of the ingredients correct OR ≥1/3 time elapsed (packet 2) and ≥⅔ correct OR ≥2/3 time elapsed (packet 3) — `packetThreshold()` in scoring.js, rounded up (9 → 3 and 6; 4 → 2 and 3). Collapsible, collapse state persisted in localStorage.
 
 ## Catch the Snitch (hidden mini-game)
 
