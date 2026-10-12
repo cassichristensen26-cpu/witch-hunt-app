@@ -16,6 +16,10 @@ import { formatCountdown } from '../lib/scoring'
 // needs to catch someone starting the game, or the duration being changed.
 const POLL_MS = 15000
 
+// The award ceremony starts this long after the game clock runs out — the same
+// gap the team page counts down to, and the auto-close/DQ cutoff.
+const CEREMONY_DELAY_MS = 10 * 60000
+
 export default function ModTimer() {
   const navigate = useNavigate()
   const token = localStorage.getItem('wh_mod_token')
@@ -108,6 +112,8 @@ export default function ModTimer() {
     : null
   const remaining = endMs != null ? endMs - now : null
   const isUp = remaining != null && remaining <= 0
+  const ceremonyRemaining = endMs != null ? endMs + CEREMONY_DELAY_MS - now : null
+  const ceremonyNow = ceremonyRemaining != null && ceremonyRemaining <= 0
 
   // Colour shifts as the clock runs down, so a glance from across a room reads
   // the state without reading the digits.
@@ -145,14 +151,30 @@ export default function ModTimer() {
             </p>
             <p className="text-gray-600 text-xl sm:text-3xl mt-4 sm:mt-8">Not started</p>
           </>
-        ) : (
+        ) : !isUp ? (
           <>
             <p className={`font-bold tabular-nums leading-none ${tone}`} style={{ fontSize: 'min(22vw, 30vh)' }}>
-              {formatCountdown(Math.max(0, remaining))}
+              {formatCountdown(remaining)}
             </p>
-            <p className={`text-xl sm:text-3xl mt-4 sm:mt-8 ${isUp ? 'text-red-500 font-semibold' : 'text-gray-600'}`}>
-              {isUp ? "Time's up" : 'remaining'}
-            </p>
+            <p className="text-gray-600 text-xl sm:text-3xl mt-4 sm:mt-8">remaining</p>
+          </>
+        ) : (
+          // Game clock has run out: the big number becomes the countdown to the
+          // award ceremony, with "Time's up" kept above it.
+          <>
+            <p className="text-red-500 font-semibold text-2xl sm:text-4xl mb-2 sm:mb-6">Time's up</p>
+            {ceremonyNow ? (
+              <p className="font-bold leading-tight text-purple-300 text-center" style={{ fontSize: 'min(12vw, 18vh)' }}>
+                Award ceremony<br />starting now!
+              </p>
+            ) : (
+              <>
+                <p className="font-bold tabular-nums leading-none text-purple-300" style={{ fontSize: 'min(22vw, 30vh)' }}>
+                  {formatCountdown(ceremonyRemaining)}
+                </p>
+                <p className="text-gray-500 text-xl sm:text-3xl mt-4 sm:mt-8">until the award ceremony</p>
+              </>
+            )}
           </>
         )}
       </div>
