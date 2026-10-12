@@ -17,6 +17,8 @@ export default function ModSetup() {
 
   const [gameName, setGameName] = useState('Witch Hunt')
   const [duration, setDuration] = useState('')
+  const [showCeremony, setShowCeremony] = useState(true)
+  const [closeAtEnd, setCloseAtEnd] = useState(false)
   const [packet2Message, setPacket2Message] = useState('')
   const [packet3Message, setPacket3Message] = useState('')
   const [ingredients, setIngredients] = useState(
@@ -69,6 +71,8 @@ export default function ModSetup() {
       const data = await modCreateGame(token, {
         name: gameName,
         duration_minutes: duration ? Number(duration) : null,
+        show_ceremony: showCeremony,
+        answers_close_at_end: closeAtEnd,
         packet2_message: packet2Message,
         packet3_message: packet3Message,
         keywords: ingredients.map((k, i) => ({
@@ -167,6 +171,52 @@ export default function ModSetup() {
                 className="w-32 bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-purple-500 transition-colors"
               />
               <span className="text-gray-600 text-sm">min (optional — enables countdown timer)</span>
+            </div>
+          </div>
+
+          {/* End-of-game options — only matter when there is a duration */}
+          <div className={`space-y-4 ${duration ? '' : 'opacity-50'}`}>
+            {!duration && (
+              <p className="text-xs text-gray-600">These need a game duration to take effect.</p>
+            )}
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showCeremony}
+                onChange={e => setShowCeremony(e.target.checked)}
+                className="mt-0.5 w-5 h-5 accent-purple-600 shrink-0"
+              />
+              <span>
+                <span className="block text-sm text-gray-200">Show award ceremony countdown</span>
+                <span className="block text-xs text-gray-600">
+                  Counts down the 10 minutes after time's up, on team pages and the timer page.
+                </span>
+              </span>
+            </label>
+            <div>
+              <p className="text-sm text-gray-200 mb-2">Close ingredient answers</p>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { value: true, label: "When time's up" },
+                  { value: false, label: '10 min after time\'s up' },
+                ].map(opt => (
+                  <button
+                    key={String(opt.value)}
+                    type="button"
+                    onClick={() => setCloseAtEnd(opt.value)}
+                    className={`rounded-xl px-3 py-2.5 text-sm border transition-colors ${
+                      closeAtEnd === opt.value
+                        ? 'bg-purple-900 border-purple-600 text-white'
+                        : 'bg-gray-900 border-gray-700 text-gray-500 hover:text-gray-300'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-gray-600 mt-2">
+                After this, teams can't type or change answers or take hints. Teams who finish earlier are still locked when you mark them done.
+              </p>
             </div>
           </div>
 

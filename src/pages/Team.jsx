@@ -140,7 +140,7 @@ export default function Team() {
     if (game?.status !== 'setup' || !teamData?.gameId) return
     const interval = setInterval(() => {
       supabase.from('games')
-        .select('id, name, status, start_time, duration_minutes, packet2_message, packet3_message')
+        .select('id, name, status, start_time, duration_minutes, packet2_message, packet3_message, show_ceremony, answers_close_at_end')
         .eq('id', teamData.gameId).single()
         .then(({ data }) => { if (data && data.status !== 'setup') setGame(data) })
     }, 10000)
@@ -158,7 +158,7 @@ export default function Team() {
     // already on screen rather than blanking it.
     function loadAll() {
       supabase.from('games')
-        .select('id, name, status, start_time, duration_minutes, packet2_message, packet3_message')
+        .select('id, name, status, start_time, duration_minutes, packet2_message, packet3_message, show_ceremony, answers_close_at_end')
         .eq('id', gameId).single()
         .then(({ data }) => { if (data) setGame(data) })
 
@@ -336,6 +336,12 @@ export default function Team() {
   const timerClass = isExpired ? 'expired' : isWarning ? 'warning' : ''
 
   const sealed = done || disqualified
+  // The moderator picks at setup whether answers close at time's up or 10
+  // minutes later. The team_answers RLS policies enforce the same cutoff
+  // (answers_closed()), this just stops the page offering input it would reject.
+  const closeDelayMs = game?.answers_close_at_end ? 0 : 10 * 60000
+  const answersClosed = timeLeftMs !== null && totalMs !== null && timeLeftMs <= -closeDelayMs
+  const showCeremony = game?.show_ceremony !== false
   // Teams join early, so answers and hints stay locked until Start. Only an
   // explicit 'setup' locks — a game row that failed to load must not.
   const notStarted = game?.status === 'setup'
@@ -386,12 +392,12 @@ export default function Team() {
               <div className={`hp-timer-label ${timerClass}`}>{isExpired ? "Time's Up" : 'Time Remaining'}</div>
               <div className={`hp-timer-value ${timerClass}`}>{isExpired ? '0:00' : formatCountdown(timeLeftMs)}</div>
               {isWarning && !isExpired && <div className="hp-timer-warning-msg warning">Head back now — late returns cost ingredients.</div>}
-              {isExpired && <div className="hp-timer-warning-msg expired">Return immediately to avoid penalties!</div>}
+              {isExpired && <div className="hp-timer-warning-msg expired">{answersClosed ? 'Answers are closed. ' : ''}Return immediately to avoid penalties!</div>}
             </div>
           )}
 
           {/* Award ceremony countdown — shown below expired timer for unsealed teams */}
-          {!sealed && isExpired && ceremonyMs !== null && (
+          {showCeremony && !sealed && isExpired && ceremonyMs !== null && (
             <div className={`hp-timer${ceremonyMs === 0 ? ' warning' : ''}`} style={{ marginTop: 12 }}>
               <div className={`hp-timer-label${ceremonyMs === 0 ? ' warning' : ''}`}>
                 {ceremonyMs > 0 ? 'Award Ceremony In' : 'Award Ceremony'}
@@ -438,7 +444,7 @@ export default function Team() {
               <div className="parchment-crease" style={{ margin: '12px -30px 16px' }} />
 
               {/* Award ceremony countdown — shown above the sealed banner */}
-              {sealed && ceremonyMs !== null && (
+              {showCeremony && sealed && ceremonyMs !== null && (
                 <div className={`hp-timer${ceremonyMs === 0 ? ' warning' : ''}`} style={{ marginBottom: 12 }}>
                   <div className={`hp-timer-label${ceremonyMs === 0 ? ' warning' : ''}`}>
                     {ceremonyMs > 0 ? 'Award Ceremony In' : 'Award Ceremony'}
@@ -455,7 +461,7 @@ export default function Team() {
                   <div className="hp-done-title">✦ Hunt Complete — Your Answers Are Sealed</div>
                   <div className="hp-done-sub" style={{ marginTop: 6 }}>
                     Scores are being tallied.
-                    {ceremonyTimeDisplay && (
+                    {showCeremony && ceremonyTimeDisplay && (
                       <> The award ceremony will begin at <strong style={{ fontStyle: 'normal', color: '#0c3414' }}>{ceremonyTimeDisplay}</strong>.</>
                     )}
                   </div>
@@ -498,8 +504,8 @@ export default function Team() {
                         type="text"
                         value={ans?.submitted_answer || ''}
                         onChange={e => handleChange(slot, e.target.value)}
-                        placeholder={sealed ? 'Answers sealed' : notStarted ? 'Opens when the game starts' : 'Write your answer here…'}
-                        disabled={sealed || notStarted}
+                        placeholder={sealed ? 'Answers sealed' : notStarted ? 'Opens when the game starts' : answersClosed ? 'Answers closed' : 'Write your answer here…'}
+                        disabled={sealed || notStarted || answersClosed}
                         autoCorrect="off"
                         autoCapitalize="off"
                         autoComplete="off"
@@ -518,7 +524,7 @@ export default function Team() {
                             ) : (
                               <span className="hp-hint-limit">Loading hint…</span>
                             )
-                          ) : (sealed || notStarted) ? null
+                          ) : (sealed || notStarted || answersClosed) ? null
                           : totalHints >= 3 ? (
                             <span className="hp-hint-limit">Hint limit reached</span>
                           ) : (

@@ -7,7 +7,7 @@ Deno.serve(async (req) => {
 
   if (!await validateModToken(req)) return err('Unauthorized', 401)
 
-  const { name, duration_minutes, packet2_message, packet3_message, keywords, teams } = await req.json()
+  const { name, duration_minutes, packet2_message, packet3_message, show_ceremony, answers_close_at_end, keywords, teams } = await req.json()
   if (!name || !keywords?.length || !teams?.length) return err('name, keywords, and teams required')
 
   const supabase = createClient(
@@ -20,6 +20,9 @@ Deno.serve(async (req) => {
   if (duration_minutes) gameRow.duration_minutes = Number(duration_minutes)
   if (packet2_message?.trim()) gameRow.packet2_message = packet2_message.trim()
   if (packet3_message?.trim()) gameRow.packet3_message = packet3_message.trim()
+  // Omitted -> column defaults (ceremony shown, answers close 10 min after end).
+  if (typeof show_ceremony === 'boolean') gameRow.show_ceremony = show_ceremony
+  if (typeof answers_close_at_end === 'boolean') gameRow.answers_close_at_end = answers_close_at_end
 
   const { data: game, error: gameErr } = await supabase
     .from('games')

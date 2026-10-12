@@ -70,7 +70,9 @@ The `team insert own answers` and `team update own answers` RLS policies also bl
 AND NOT EXISTS (SELECT 1 FROM teams t WHERE t.id = team_answers.team_id
                 AND (t.end_time IS NOT NULL OR t.disqualified = true))
 ```
-So a done or disqualified team cannot INSERT/UPDATE answers even via the raw API. The Team page already disables inputs when `sealed` (done || disqualified); this is server-side defense-in-depth. A rejected write surfaces as an RLS error caught silently in `handleChange`'s `console.error('Save failed:', e)`.
+So a done or disqualified team cannot INSERT/UPDATE answers even via the raw API.
+
+Both policies also require `NOT answers_closed(team_answers.team_id)` (migration `006`): a SECURITY DEFINER function that is true once `now()` passes `start_time + duration_minutes`, plus 10 minutes unless `games.answers_close_at_end`. The Team page mirrors this as `answersClosed` (disables inputs and hint buttons). That setting and `games.show_ceremony` (award-ceremony countdown on Team and ModTimer) are chosen per game on the setup page; both columns default to the old behaviour. The Team page already disables inputs when `sealed` (done || disqualified); this is server-side defense-in-depth. A rejected write surfaces as an RLS error caught silently in `handleChange`'s `console.error('Save failed:', e)`.
 
 ## Auth
 

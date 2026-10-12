@@ -114,6 +114,7 @@ export default function ModTimer() {
   const isUp = remaining != null && remaining <= 0
   const ceremonyRemaining = endMs != null ? endMs + CEREMONY_DELAY_MS - now : null
   const ceremonyNow = ceremonyRemaining != null && ceremonyRemaining <= 0
+  const showCeremony = game?.show_ceremony !== false
 
   // Colour shifts as the clock runs down, so a glance from across a room reads
   // the state without reading the digits.
@@ -157,6 +158,13 @@ export default function ModTimer() {
               {formatCountdown(remaining)}
             </p>
             <p className="text-gray-600 text-xl sm:text-3xl mt-4 sm:mt-8">remaining</p>
+          </>
+        ) : !showCeremony ? (
+          <>
+            <p className={`font-bold tabular-nums leading-none ${tone}`} style={{ fontSize: 'min(22vw, 30vh)' }}>
+              0:00
+            </p>
+            <p className="text-red-500 font-semibold text-xl sm:text-3xl mt-4 sm:mt-8">Time's up</p>
           </>
         ) : (
           // Game clock has run out: the big number becomes the countdown to the
