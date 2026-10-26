@@ -497,6 +497,10 @@ export default function Team() {
                       <> The award ceremony will begin at <strong style={{ fontStyle: 'normal', color: '#0c3414' }}>{ceremonyTimeDisplay}</strong>.</>
                     )}
                   </div>
+                  {/* Rules-page "finished" message. Not for DQ'd teams. */}
+                  {done && !disqualified && messages.finished_message && (
+                    <div className="hp-done-sub" style={{ marginTop: 8, fontStyle: 'normal', fontWeight: 600, color: '#0c3414' }}>{messages.finished_message}</div>
+                  )}
                 </div>
               )}
 

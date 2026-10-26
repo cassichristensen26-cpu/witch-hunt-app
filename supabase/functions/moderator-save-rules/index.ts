@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
       // Team-facing messages (src/lib/teamMessages.js). Only the ones sent are
       // written, so an older client leaves the rest alone.
       ...Object.fromEntries(
-        ['hint_help', 'time_warning', 'time_up']
+        ['hint_help', 'time_warning', 'time_up', 'finished_message']
           .filter(k => typeof body[k] === 'string')
           .map(k => [k, body[k]])
       ),

@@ -20,10 +20,16 @@ export const TEAM_MESSAGES = [
     help: 'Shown under the timer once time has run out.',
     default: 'Return immediately to avoid penalties!',
   },
+  {
+    key: 'finished_message',
+    label: 'Finished Message',
+    help: 'Shown on a team\'s page once they are done (after tapping "We\'re Finished", or when you mark them done).',
+    default: 'Your answers are in! Head back to the starting point and find a moderator.',
+  },
 ]
 
 export const TEAM_MESSAGE_COLUMNS = TEAM_MESSAGES.map(m => m.key).join(', ')
 
-// rules row (or null) -> { hint_help, time_warning, time_up } with defaults filled in.
+// rules row (or null) -> { hint_help, time_warning, time_up, finished_message } with defaults filled in.
 export const resolveMessages = (row) =>
   Object.fromEntries(TEAM_MESSAGES.map(m => [m.key, row?.[m.key] ?? m.default]))
