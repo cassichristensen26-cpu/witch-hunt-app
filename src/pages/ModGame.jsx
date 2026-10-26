@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { modStartGame, modGetGame, modToggleDone, modAutoClose } from '../lib/api'
+import { modStartGame, modGetGame, modToggleDone, modAutoClose, finishAtTimeUp } from '../lib/api'
 import { rankTeams, scoreTeam, formatTime } from '../lib/scoring'
 
 export default function ModGame() {
@@ -35,6 +35,12 @@ export default function ModGame() {
       ) {
         const gameEndMs = new Date(data.game.start_time).getTime() + data.game.duration_minutes * 60000
         const hasUnfinished = data.teams?.some(t => !t.end_time && !t.disqualified)
+        // Close-at-time's-up games finish every team at 0:00 (team phones ask
+        // too; the server runs it once). Skipped once it has run, so a team you
+        // put back to playing afterwards isn't re-finished every 5 seconds.
+        if (data.game.answers_close_at_end && !data.game.auto_finished_at && Date.now() >= gameEndMs && hasUnfinished) {
+          finishAtTimeUp(gameId).then(r => { if (r?.finished) fetchData() }).catch(() => {})
+        }
         if (Date.now() > gameEndMs + 10 * 60000 && hasUnfinished) {
           autoClosedRef.current = true
           try {

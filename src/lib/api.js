@@ -111,6 +111,8 @@ export async function upsertAnswer(teamId, slot, answer) {
 // The server's current epoch-ms. Public and side-effect free; see clock.js for
 // why the snitch board can't just use the phone's own clock.
 export const getServerTime = () => edge('snitch-time', {})
+// Called by any device whose clock hits 0:00; the server decides whether it applies.
+export const finishAtTimeUp = (gameId) => edge('finish-at-time-up', { game_id: gameId })
 
 // Submit a guess. Uses the team's own JWT (like requestHint) so the edge
 // function can confirm the user belongs to the team. click_ts is the moment the

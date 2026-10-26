@@ -103,6 +103,7 @@ All moderator functions validate `x-mod-token` via `validateModToken` in `_share
 | `moderator-get-snitch-text` | Read the snitch copy including `banner` (service role — teams have that column REVOKEd) |
 | `moderator-save-snitch-text` | Upsert the snitch copy row |
 | `team-mark-done` | Team's own "We're Finished" button (team JWT, like `request-hint`). Refuses unless `games.show_finish_button`; one-way; conditional update so six phones log one finish event and one late penalty. Late penalties shared with `moderator-mark-done` via `_shared/late-penalty.ts` |
+| `finish-at-time-up` | For `answers_close_at_end` games: at 0:00 marks every unfinished team done, stamped at the game end time (no late penalty). Public, no auth — it only acts when the game's own settings and clock say so. No DB scheduler, so every team phone past 0:00 and ModGame call it; the `games.auto_finished_at` claim (migration `010`) makes it run once per game, so a team the moderator later reopens isn't swept up again |
 | `snitch-time` | Return the server's epoch-ms clock, so every snitch board grades taps on the same clock (public, no side effects) |
 
 ## Deploying Edge Functions
@@ -156,6 +157,7 @@ Fires on `BEFORE INSERT OR UPDATE OF submitted_answer`. Resets `moderator_overri
 - 5:01–10:00 late → −2 ingredients
 - 10:01+ → disqualified
 - 10+ min after game end → auto-close all remaining teams (DQ)
+- Games set to close answers at time's up never reach these: `finish-at-time-up` marks every unfinished team done at 0:00
 
 ## Hint System
 

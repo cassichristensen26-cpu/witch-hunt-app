@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { upsertAnswer, ensureAnonSession, requestHint, joinTeam, teamMarkDone } from '../lib/api'
+import { upsertAnswer, ensureAnonSession, requestHint, joinTeam, teamMarkDone, finishAtTimeUp } from '../lib/api'
 import { syncClock, serverNow } from '../lib/clock'
 import { formatCountdown, packetThreshold } from '../lib/scoring'
 import { resolveMessages, TEAM_MESSAGE_COLUMNS } from '../lib/teamMessages'
@@ -380,6 +380,20 @@ export default function Team() {
     ? Math.max(0, 1 - timeLeftMs / totalMs) : 0
   const showPacket2 = !sealed && !isExpired && !!(game?.packet2_message && ((slots.length > 0 && correctCount >= packetThreshold(slots.length, 1)) || timeElapsedFraction >= 1 / 3))
   const showPacket3 = !sealed && !isExpired && !!(game?.packet3_message && ((slots.length > 0 && correctCount >= packetThreshold(slots.length, 2)) || timeElapsedFraction >= 2 / 3))
+
+  // Games that close answers at time's up also finish every team at 0:00. No
+  // scheduler runs that server-side, so each phone whose clock runs out asks
+  // (finish-at-time-up runs it once). Keeps asking every 10s in case its clock
+  // was slightly ahead of the server's; stops once realtime reports the team
+  // done. The random delay spreads ~120 phones over a few seconds.
+  const shouldFinishAtTimeUp = !!game?.answers_close_at_end && isExpired && !sealed && !!game?.id
+  useEffect(() => {
+    if (!shouldFinishAtTimeUp) return
+    const ask = () => finishAtTimeUp(game.id).catch(() => {})
+    const first = setTimeout(ask, Math.random() * 3000)
+    const again = setInterval(ask, 10000)
+    return () => { clearTimeout(first); clearInterval(again) }
+  }, [shouldFinishAtTimeUp, game?.id])
 
   const ceremonyDate = game?.start_time && game?.duration_minutes
     ? new Date(new Date(game.start_time).getTime() + (game.duration_minutes + 10) * 60000)
