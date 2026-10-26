@@ -19,7 +19,7 @@ Deno.serve(async (req) => {
   const [{ data: game }, { data: teams }, { data: answers }, { data: adjustments }, { count: keyword_count }] = await Promise.all([
     supabase.from('games').select('*').eq('id', game_id).single(),
     supabase.from('teams').select('*').eq('game_id', game_id).order('created_at'),
-    supabase.from('team_answers').select('team_id, keyword_slot, submitted_answer, is_correct, moderator_override, updated_at')
+    supabase.from('team_answers').select('team_id, keyword_slot, submitted_answer, is_correct, moderator_override, updated_at, submitted_at')
       .in('team_id', (await supabase.from('teams').select('id').eq('game_id', game_id)).data?.map((t: { id: string }) => t.id) ?? []),
     supabase.from('adjustments').select('*')
       .in('team_id', (await supabase.from('teams').select('id').eq('game_id', game_id)).data?.map((t: { id: string }) => t.id) ?? []),

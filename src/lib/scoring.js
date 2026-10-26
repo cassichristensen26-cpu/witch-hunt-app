@@ -16,14 +16,30 @@ export function scoreTeam(team, answers, adjustments, game) {
   const timePenalty = adjustments.filter(a => a.type === 'time_penalty').reduce((s, a) => s + Number(a.amount), 0)
   const adjustedTime = elapsedMin !== null ? elapsedMin - timeBonus + timePenalty : Infinity
 
-  return { team, keywordsFound, adjustedTime, finished: !!team.end_time, disqualified: false }
+  // Tie-break: when the team submitted its latest correct answer. submitted_at
+  // is the team's own submit time, so a moderator accepting an answer later
+  // doesn't move it (updated_at would). null with no correct answers.
+  const correctTimes = answers.filter(a => a.is_correct)
+    .map(a => new Date(a.submitted_at || a.updated_at).getTime())
+    .filter(t => !isNaN(t))
+  const lastCorrectAt = correctTimes.length ? Math.max(...correctTimes) : null
+
+  return { team, keywordsFound, adjustedTime, lastCorrectAt, finished: !!team.end_time, disqualified: false }
 }
+
+// Ascending, treating two Infinity values as equal (Infinity - Infinity is NaN,
+// which sort() mishandles — it would stop the next tie-break from running).
+const timeOrder = (x, y) => (x === y ? 0 : x - y)
 
 export function rankTeams(scored) {
   const active = scored.filter(s => !s.disqualified)
   const dqd = scored.filter(s => s.disqualified)
   const sortedActive = [...active].sort((a, b) =>
-    b.keywordsFound - a.keywordsFound || a.adjustedTime - b.adjustedTime
+    b.keywordsFound - a.keywordsFound ||
+    timeOrder(a.adjustedTime, b.adjustedTime) ||
+    // Still tied (e.g. everyone finished at 0:00): whoever got their latest
+    // correct answer in first. No correct answers sorts last.
+    timeOrder(a.lastCorrectAt ?? Infinity, b.lastCorrectAt ?? Infinity)
   )
   return [...sortedActive, ...dqd]
 }

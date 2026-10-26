@@ -149,7 +149,7 @@ Fires on `BEFORE INSERT OR UPDATE OF submitted_answer`. Resets `moderator_overri
 
 - `keywordsFound = correct answers + keyword_bonus adjustments - keyword_penalty adjustments` (min 0)
 - `adjustedTime = elapsed minutes - time_bonus + time_penalty`
-- Rank: most keywords first, tie-break by shortest adjusted time; DQ teams last
+- Rank: most keywords first, tie-break by shortest adjusted time, then by earliest latest-correct-answer time (`team_answers.submitted_at`, stamped by the answer trigger — not `updated_at`, which an override rewrites; migration `011`); DQ teams last
 
 ## Late Penalties (moderator-mark-done)
 
