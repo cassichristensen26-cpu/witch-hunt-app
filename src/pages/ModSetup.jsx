@@ -19,6 +19,7 @@ export default function ModSetup() {
   const [duration, setDuration] = useState('')
   const [showCeremony, setShowCeremony] = useState(true)
   const [closeAtEnd, setCloseAtEnd] = useState(false)
+  const [showFinishButton, setShowFinishButton] = useState(false)
   const [packet2Message, setPacket2Message] = useState('')
   const [packet3Message, setPacket3Message] = useState('')
   const [ingredients, setIngredients] = useState(
@@ -73,6 +74,7 @@ export default function ModSetup() {
         duration_minutes: duration ? Number(duration) : null,
         show_ceremony: showCeremony,
         answers_close_at_end: closeAtEnd,
+        show_finish_button: showFinishButton,
         packet2_message: packet2Message,
         packet3_message: packet3Message,
         keywords: ingredients.map((k, i) => ({
@@ -219,6 +221,22 @@ export default function ModSetup() {
               </p>
             </div>
           </div>
+
+          {/* Team self-finish — independent of the duration */}
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showFinishButton}
+              onChange={e => setShowFinishButton(e.target.checked)}
+              className="mt-0.5 w-5 h-5 accent-purple-600 shrink-0"
+            />
+            <span>
+              <span className="block text-sm text-gray-200">Show a "Finished" button on team pages</span>
+              <span className="block text-xs text-gray-600">
+                Lets teams mark themselves done (after a confirmation), which seals their answers. Only you can put them back to playing.
+              </span>
+            </span>
+          </label>
 
           {/* Packet messages */}
           <div className="space-y-4">

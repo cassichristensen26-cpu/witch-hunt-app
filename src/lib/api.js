@@ -78,6 +78,24 @@ export async function requestHint(teamId, slot) {
   return data
 }
 
+// The team page's "Finished" button. Team JWT, like requestHint.
+export async function teamMarkDone(teamId) {
+  await ensureAnonSession()
+  const { data: { session } } = await supabase.auth.getSession()
+  const res = await fetch(`${EDGE_BASE}/team-mark-done`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': ANON_KEY,
+      'Authorization': `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({ team_id: teamId }),
+  })
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Request failed')
+  return data
+}
+
 export async function upsertAnswer(teamId, slot, answer) {
   const { error } = await supabase
     .from('team_answers')

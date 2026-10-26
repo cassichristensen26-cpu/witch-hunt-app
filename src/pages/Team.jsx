@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { upsertAnswer, ensureAnonSession, requestHint, joinTeam } from '../lib/api'
+import { upsertAnswer, ensureAnonSession, requestHint, joinTeam, teamMarkDone } from '../lib/api'
 import { syncClock, serverNow } from '../lib/clock'
 import { formatCountdown, packetThreshold } from '../lib/scoring'
 import { resolveMessages, TEAM_MESSAGE_COLUMNS } from '../lib/teamMessages'
@@ -29,6 +29,10 @@ export default function Team() {
   const [revealedHints, setRevealedHints] = useState({})
   const [confirmHint, setConfirmHint] = useState(null)
   const [hintLoading, setHintLoading] = useState(false)
+
+  const [confirmFinish, setConfirmFinish] = useState(false)
+  const [finishing, setFinishing] = useState(false)
+  const [finishError, setFinishError] = useState('')
 
   const [packet2Collapsed, setPacket2Collapsed] = useState(
     () => localStorage.getItem('wh_packet2_collapsed') === 'true'
@@ -140,7 +144,7 @@ export default function Team() {
     if (game?.status !== 'setup' || !teamData?.gameId) return
     const interval = setInterval(() => {
       supabase.from('games')
-        .select('id, name, status, start_time, duration_minutes, packet2_message, packet3_message, show_ceremony, answers_close_at_end')
+        .select('id, name, status, start_time, duration_minutes, packet2_message, packet3_message, show_ceremony, answers_close_at_end, show_finish_button')
         .eq('id', teamData.gameId).single()
         .then(({ data }) => { if (data && data.status !== 'setup') setGame(data) })
     }, 10000)
@@ -158,7 +162,7 @@ export default function Team() {
     // already on screen rather than blanking it.
     function loadAll() {
       supabase.from('games')
-        .select('id, name, status, start_time, duration_minutes, packet2_message, packet3_message, show_ceremony, answers_close_at_end')
+        .select('id, name, status, start_time, duration_minutes, packet2_message, packet3_message, show_ceremony, answers_close_at_end, show_finish_button')
         .eq('id', gameId).single()
         .then(({ data }) => { if (data) setGame(data) })
 
@@ -316,6 +320,32 @@ export default function Team() {
       setConfirmHint(null)
     } finally {
       setHintLoading(false)
+    }
+  }
+
+  // Write any answer still mid-debounce or mid-retry first: once the team is
+  // done the RLS write lock rejects it, and the last thing typed would be lost.
+  async function confirmAndFinish() {
+    setFinishing(true)
+    setFinishError('')
+    try {
+      for (const slot of Object.keys(debounceRef.current)) {
+        clearTimeout(debounceRef.current[slot])
+        debounceRef.current[slot] = null
+      }
+      for (const slot of Object.keys(retryRef.current)) clearTimeout(retryRef.current[slot])
+      await Promise.all(Object.keys(pendingRef.current).map(slot => flushSlot(Number(slot))))
+      if (Object.keys(pendingRef.current).length > 0) {
+        setFinishError("Some answers haven't saved yet. Wait a moment and try again.")
+        return
+      }
+      await teamMarkDone(teamData.teamId)
+      setDone(true)
+      setConfirmFinish(false)
+    } catch (e) {
+      setFinishError(e.message || 'Something went wrong. Try again.')
+    } finally {
+      setFinishing(false)
     }
   }
 
@@ -562,6 +592,13 @@ export default function Team() {
                   })}
                 </div>
               )}
+
+              {/* Optional self-finish, chosen per game on the setup page */}
+              {game?.show_finish_button && !sealed && !notStarted && (
+                <button className="hp-finish-btn" onClick={() => { setFinishError(''); setConfirmFinish(true) }}>
+                  We're Finished
+                </button>
+              )}
             </>
           )}
 
@@ -571,6 +608,30 @@ export default function Team() {
           </button>
         </div>
       </div>
+
+      {/* Finish confirmation modal */}
+      {confirmFinish && !sealed && (
+        <div className="hp-modal-overlay">
+          <div className="hp-modal parchment">
+            <div className="hp-modal-title danger">Are You Sure You're Done?</div>
+            <div className="hp-modal-body">
+              This ends the hunt for your whole team and stops your clock.
+            </div>
+            <div className="hp-modal-warning">
+              <div className="hp-modal-warning-text">
+                <strong>Once you confirm, you will not be able to add or change any answers.</strong> Make this a team decision.
+              </div>
+            </div>
+            {finishError && <div className="hp-modal-body" style={{ color: '#5a0808' }}>{finishError}</div>}
+            <div className="hp-modal-actions">
+              <button className="hp-btn-cancel" onClick={() => setConfirmFinish(false)} disabled={finishing}>Keep Playing</button>
+              <button className="hp-btn-confirm" onClick={confirmAndFinish} disabled={finishing}>
+                {finishing ? 'Sealing…' : "Yes, We're Done"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Hint confirmation modal */}
       {confirmHint && (

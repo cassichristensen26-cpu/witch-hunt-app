@@ -72,7 +72,7 @@ AND NOT EXISTS (SELECT 1 FROM teams t WHERE t.id = team_answers.team_id
 ```
 So a done or disqualified team cannot INSERT/UPDATE answers even via the raw API.
 
-Both policies also require `NOT answers_closed(team_answers.team_id)` (migration `006`): a SECURITY DEFINER function that is true once `now()` passes `start_time + duration_minutes`, plus 10 minutes unless `games.answers_close_at_end`. The Team page mirrors this as `answersClosed` (disables inputs and hint buttons). That setting and `games.show_ceremony` (award-ceremony countdown on Team and ModTimer) are chosen per game on the setup page; both columns default to the old behaviour. The Team page already disables inputs when `sealed` (done || disqualified); this is server-side defense-in-depth. A rejected write surfaces as an RLS error caught silently in `handleChange`'s `console.error('Save failed:', e)`.
+Both policies also require `NOT answers_closed(team_answers.team_id)` (migration `006`): a SECURITY DEFINER function that is true once `now()` passes `start_time + duration_minutes`, plus 10 minutes unless `games.answers_close_at_end`. The Team page mirrors this as `answersClosed` (disables inputs and hint buttons). `games.show_finish_button` (migration `008`, default off) shows a "We're Finished" button at the bottom of the Team page; its confirm dialog flushes unsaved answers before calling `team-mark-done`, since the write lock would reject them afterwards. The Team page selects this column, so **apply 008 to the live DB before pushing the frontend** or the game row fails to load. That setting and `games.show_ceremony` (award-ceremony countdown on Team and ModTimer) are chosen per game on the setup page; both columns default to the old behaviour. The Team page already disables inputs when `sealed` (done || disqualified); this is server-side defense-in-depth. A rejected write surfaces as an RLS error caught silently in `handleChange`'s `console.error('Save failed:', e)`.
 
 ## Auth
 
@@ -102,6 +102,7 @@ All moderator functions validate `x-mod-token` via `validateModToken` in `_share
 | `snitch-guess` | Judge a Catch the Snitch guess; writes 1-min penalties past the 3 free guesses |
 | `moderator-get-snitch-text` | Read the snitch copy including `banner` (service role — teams have that column REVOKEd) |
 | `moderator-save-snitch-text` | Upsert the snitch copy row |
+| `team-mark-done` | Team's own "We're Finished" button (team JWT, like `request-hint`). Refuses unless `games.show_finish_button`; one-way; conditional update so six phones log one finish event and one late penalty. Late penalties shared with `moderator-mark-done` via `_shared/late-penalty.ts` |
 | `snitch-time` | Return the server's epoch-ms clock, so every snitch board grades taps on the same clock (public, no side effects) |
 
 ## Deploying Edge Functions

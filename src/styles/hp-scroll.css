@@ -296,3 +296,7 @@
 .hp-btn-confirm { flex: 1; padding: 11px; background: linear-gradient(to bottom, #3d1a6e, #26104a); border: 1px solid rgba(90,40,160,0.5); border-radius: 2px; font-family: 'Cinzel', serif; font-size: 0.8rem; color: #d4b8f8; cursor: pointer; transition: background 0.2s, opacity 0.2s; letter-spacing: 0.06em; }
 .hp-btn-confirm:disabled { opacity: 0.4; cursor: not-allowed; }
 .hp-btn-confirm:not(:disabled):hover { background: linear-gradient(to bottom, #5a28a0, #3d1a6e); }
+
+/* === Optional "We're Finished" button (games.show_finish_button) === */
+.hp-finish-btn { display: block; width: 100%; margin-top: 28px; padding: 13px; background: linear-gradient(to bottom, #3d1a6e, #26104a); border: 1px solid rgba(90,40,160,0.5); border-radius: 2px; font-family: 'Cinzel', serif; font-size: 0.9rem; color: #d4b8f8; letter-spacing: 0.08em; cursor: pointer; position: relative; transition: background 0.2s; }
+.hp-finish-btn:hover { background: linear-gradient(to bottom, #5a28a0, #3d1a6e); }
